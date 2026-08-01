@@ -1,0 +1,54 @@
+/*
+ * Design tokens — light, minimalist, modern.
+ * Replaces the exported prototype's Nocturne binding (a dark-first system
+ * whose hairline borders/shadows read heavy once flipped to light) with a
+ * fresh single-accent system: near-white/near-black neutrals, one accent
+ * hue (a clean green — fits "adherence/progress" semantics), soft shadows
+ * instead of hard borders.
+ */
+:root {
+  --color-bg: #f5f6f9;
+  --color-surface: #ffffff;
+  --color-text: #1c1e24;
+  --color-accent: #2fb37e;
+  --color-divider: color-mix(in srgb, #1c1e24 8%, transparent);
+
+  --color-neutral-100: #fafafc;
+  --color-neutral-200: #f1f2f6;
+  --color-neutral-300: #e3e5ec;
+  --color-neutral-400: #cbced9;
+  --color-neutral-500: #a8acbb;
+  --color-neutral-600: #83879a;
+  --color-neutral-700: #5f6377;
+  --color-neutral-800: #40434f;
+  --color-neutral-900: #24262e;
+
+  --color-accent-100: #eafbf3;
+  --color-accent-200: #cff3e1;
+  --color-accent-300: #9fe6c3;
+  --color-accent-400: #63d19e;
+  --color-accent-500: #2fb37e;
+  --color-accent-600: #1f9468;
+  --color-accent-700: #167551;
+  --color-accent-800: #14573e;
+  --color-accent-900: #12402f;
+
+  --font-heading: 'Inter', system-ui, sans-serif;
+  --font-heading-weight: 600;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 1px rgba(16, 24, 40, 0.03);
+  --shadow-md: 0 4px 16px rgba(16, 24, 40, 0.07), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-lg: 0 20px 48px rgba(16, 24, 40, 0.14), 0 2px 8px rgba(16, 24, 40, 0.06);
+}
