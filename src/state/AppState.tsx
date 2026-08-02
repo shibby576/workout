@@ -1,5 +1,6 @@
-import { createContext, useContext, useMemo, useReducer, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react';
 import { initialRoutineItems, initialWeeks } from '../data/mockData';
+import { loadPersisted, savePersisted } from './persistence';
 import type { Category, CardioSubtype, MatchTag, RoutineItem, Week } from '../types';
 
 export type Tab = 'week' | 'routine' | 'history';
@@ -46,8 +47,12 @@ function isFreshStart(): boolean {
 
 function buildInitialState(): AppState {
   const fresh = isFreshStart();
-  const routineItems = fresh ? [] : initialRoutineItems;
-  const weeks = fresh ? [] : initialWeeks;
+  // fresh=1 is a non-destructive preview: it never reads or writes real
+  // saved progress, so it stays safe to link/bookmark without risking
+  // whatever's actually stored.
+  const persisted = fresh ? null : loadPersisted();
+  const routineItems = fresh ? [] : (persisted?.routineItems ?? initialRoutineItems);
+  const weeks = fresh ? [] : (persisted?.weeks ?? initialWeeks);
   return {
     activeTab: 'week',
     currentWeekIdx: Math.max(0, weeks.length - 1),
@@ -183,6 +188,12 @@ const DispatchCtx = createContext<React.Dispatch<Action> | null>(null);
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const stateValue = useMemo(() => state, [state]);
+
+  useEffect(() => {
+    if (isFreshStart()) return;
+    savePersisted(state.routineItems, state.weeks);
+  }, [state.routineItems, state.weeks]);
+
   return (
     <StateCtx.Provider value={stateValue}>
       <DispatchCtx.Provider value={dispatch}>{children}</DispatchCtx.Provider>
