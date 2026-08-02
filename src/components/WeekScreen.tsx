@@ -6,6 +6,7 @@ import { formatWorkoutMetrics } from '../utils/format';
 import { MatchCard } from './MatchCard';
 import { ProgressRing } from './ProgressRing';
 import { EmptyState } from './EmptyState';
+import { ConnectStrava } from './ConnectStrava';
 import { ChevronLeftIcon, ChevronRightIcon, ClipboardIcon } from './icons';
 
 export function WeekScreen() {
@@ -127,14 +128,12 @@ function WeekBody({
               <ChevronRightIcon />
             </button>
           </div>
-        ) : (
-          <div style={{ marginTop: 12, fontSize: 12, color: 'var(--color-neutral-500)', textAlign: 'center' }}>
-            Nothing synced yet — connect Strava to start matching workouts against this.
-          </div>
-        )}
+        ) : null}
       </div>
 
       <div className="app-scroll">
+        {!showNav && <ConnectStrava />}
+
         {week.matches.map((m) => (
           <MatchCard key={m.id} match={m} item={itemFor(routineItems, m.routineItemId)} />
         ))}
