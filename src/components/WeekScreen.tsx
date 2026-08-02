@@ -1,15 +1,77 @@
 import { useAppDispatch, useAppState, itemFor } from '../state/AppState';
+import type { RoutineItem, Week } from '../types';
 import { computeAdherence } from '../utils/adherence';
+import { buildVirtualWeek } from '../utils/virtualWeek';
 import { formatWorkoutMetrics } from '../utils/format';
 import { MatchCard } from './MatchCard';
 import { ProgressRing } from './ProgressRing';
-import { ChevronLeftIcon, ChevronRightIcon } from './icons';
+import { EmptyState } from './EmptyState';
+import { ChevronLeftIcon, ChevronRightIcon, ClipboardIcon } from './icons';
 
 export function WeekScreen() {
   const { weeks, currentWeekIdx, routineItems } = useAppState();
   const dispatch = useAppDispatch();
-  const idx = currentWeekIdx;
-  const week = weeks[idx];
+
+  if (routineItems.length === 0) {
+    return (
+      <div className="screen">
+        <div className="header">
+          <h1>This Week</h1>
+        </div>
+        <div className="app-scroll">
+          <EmptyState
+            icon={<ClipboardIcon color="var(--color-neutral-500)" />}
+            title="No routine yet"
+            body="Add a weekly routine — a lift, a run type, a cross-train slot — and this week's plan will show up here."
+          />
+          <button type="button" className="pill-btn" style={{ width: '100%' }} onClick={() => dispatch({ type: 'SELECT_TAB', tab: 'routine' })}>
+            Set up your routine
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (weeks.length === 0) {
+    // Routine exists, nothing logged/synced against it yet — synthesize a
+    // read-only first week from the routine instead of indexing into an
+    // empty weeks array. No prev/next: there's nothing to page through.
+    const virtual = buildVirtualWeek(routineItems);
+    return <WeekBody week={virtual} routineItems={routineItems} showNav={false} />;
+  }
+
+  const week = weeks[currentWeekIdx];
+  return (
+    <WeekBody
+      week={week}
+      routineItems={routineItems}
+      showNav
+      canPrev={currentWeekIdx > 0}
+      canNext={currentWeekIdx < weeks.length - 1}
+      onPrev={() => dispatch({ type: 'STEP_WEEK', delta: -1 })}
+      onNext={() => dispatch({ type: 'STEP_WEEK', delta: 1 })}
+    />
+  );
+}
+
+function WeekBody({
+  week,
+  routineItems,
+  showNav,
+  canPrev = false,
+  canNext = false,
+  onPrev,
+  onNext,
+}: {
+  week: Week;
+  routineItems: RoutineItem[];
+  showNav: boolean;
+  canPrev?: boolean;
+  canNext?: boolean;
+  onPrev?: () => void;
+  onNext?: () => void;
+}) {
+  const dispatch = useAppDispatch();
   const adh = computeAdherence(week);
   const remaining = week.matches.filter((m) => m.status === 'open').map((m) => itemFor(routineItems, m.routineItemId).label);
 
@@ -47,35 +109,29 @@ export function WeekScreen() {
           </div>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
-          <button
-            type="button"
-            className="icon-chip"
-            disabled={idx <= 0}
-            onClick={() => dispatch({ type: 'STEP_WEEK', delta: -1 })}
-            aria-label="Previous week"
-          >
-            <ChevronLeftIcon />
-          </button>
-          <div style={{ flex: 1, textAlign: 'center' }}>
-            <div style={{ fontSize: 14, color: 'var(--color-text)' }}>
-              {week.label}
-              {week.current ? ' (in progress)' : ''}
+        {showNav ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+            <button type="button" className="icon-chip" disabled={!canPrev} onClick={onPrev} aria-label="Previous week">
+              <ChevronLeftIcon />
+            </button>
+            <div style={{ flex: 1, textAlign: 'center' }}>
+              <div style={{ fontSize: 14, color: 'var(--color-text)' }}>
+                {week.label}
+                {week.current ? ' (in progress)' : ''}
+              </div>
+              <div className="sub">
+                {adh.done} of {adh.total} done · {adh.pct}%
+              </div>
             </div>
-            <div className="sub">
-              {adh.done} of {adh.total} done · {adh.pct}%
-            </div>
+            <button type="button" className="icon-chip" disabled={!canNext} onClick={onNext} aria-label="Next week">
+              <ChevronRightIcon />
+            </button>
           </div>
-          <button
-            type="button"
-            className="icon-chip"
-            disabled={idx >= weeks.length - 1}
-            onClick={() => dispatch({ type: 'STEP_WEEK', delta: 1 })}
-            aria-label="Next week"
-          >
-            <ChevronRightIcon />
-          </button>
-        </div>
+        ) : (
+          <div style={{ marginTop: 12, fontSize: 12, color: 'var(--color-neutral-500)', textAlign: 'center' }}>
+            Nothing synced yet — connect Strava to start matching workouts against this.
+          </div>
+        )}
       </div>
 
       <div className="app-scroll">

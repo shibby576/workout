@@ -39,17 +39,29 @@ type Action =
   | { type: 'SET_NEW_ITEM_FIELD'; field: keyof NewItemDraft; value: NewItemDraft[keyof NewItemDraft] }
   | { type: 'ADD_ITEM' };
 
-const initialState: AppState = {
-  activeTab: 'week',
-  currentWeekIdx: initialWeeks.length - 1,
-  reviewId: null,
-  reviewTag: null,
-  attachIdx: null,
-  addingItem: false,
-  newItem: { category: 'cardio', subtype: 'base', target: 1 },
-  routineItems: initialRoutineItems,
-  weeks: initialWeeks,
-};
+function isFreshStart(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('fresh') === '1';
+}
+
+function buildInitialState(): AppState {
+  const fresh = isFreshStart();
+  const routineItems = fresh ? [] : initialRoutineItems;
+  const weeks = fresh ? [] : initialWeeks;
+  return {
+    activeTab: 'week',
+    currentWeekIdx: Math.max(0, weeks.length - 1),
+    reviewId: null,
+    reviewTag: null,
+    attachIdx: null,
+    addingItem: false,
+    newItem: { category: 'cardio', subtype: 'base', target: 1 },
+    routineItems,
+    weeks,
+  };
+}
+
+const initialState: AppState = buildInitialState();
 
 const SUBTYPE_LABEL: Record<CardioSubtype, string> = { base: 'Base run', threshold: 'Threshold run', vo2max: 'VO2max run' };
 
