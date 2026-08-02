@@ -132,7 +132,7 @@ function WeekBody({
       </div>
 
       <div className="app-scroll">
-        {!showNav && <ConnectStrava />}
+        {week.current && <ConnectStrava />}
 
         {week.matches.map((m) => (
           <MatchCard key={m.id} match={m} item={itemFor(routineItems, m.routineItemId)} />
