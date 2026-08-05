@@ -6,7 +6,9 @@ export function getStravaAuthorizeUrl(): string {
     redirect_uri: `${window.location.origin}/api/strava/callback`,
     response_type: 'code',
     approval_prompt: 'auto',
-    scope: 'activity:read_all',
+    // profile:read_all is needed to read athlete HR/power zones and FTP for the
+    // cardio-feedback setup gate; activity:read_all covers activity + streams.
+    scope: 'activity:read_all,profile:read_all',
   });
   return `https://www.strava.com/oauth/authorize?${params.toString()}`;
 }
