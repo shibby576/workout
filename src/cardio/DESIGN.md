@@ -92,9 +92,14 @@ Defer a real datastore until cross-device / multi-user matters.
 5. **Coach's note:** generated, below the facts, with a "regenerate" button.
 
 ## Build sequence
-0. `SessionSummary` contract + these notes ✅ (this commit)
+0. `SessionSummary` contract + these notes ✅
 1. Extend Strava ingestion behind a source interface: streams + laps + detail +
-   zones + FTP endpoints (reuse `_lib.ts`).
+   zones + FTP endpoints (reuse `_lib.ts`). ✅
+   - `WorkoutSource` interface + `stravaSource` (`src/cardio/source.ts`)
+   - Raw payload types (`src/cardio/stravaTypes.ts`)
+   - Endpoints: `api/strava/{list,session,profile}.ts`; fetch helpers added to
+     `_lib.ts`. Reading zones/FTP needs the `profile:read_all` scope — profile
+     endpoint degrades to nulls (→ manual max-HR) when it's absent.
 2. Structuring module — pure, unit-tested → `SessionSummary`; save fixtures.
 3. Select-workout + intent UI.
 4. Generation — server-side `/api/coach/generate`, provider-abstracted, one-shot.

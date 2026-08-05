@@ -116,3 +116,36 @@ export async function fetchActivities(accessToken: string, perPage = 30): Promis
   if (!res.ok) throw new Error(`Strava activities request failed: ${res.status} ${await res.text()}`);
   return (await res.json()) as unknown[];
 }
+
+async function stravaGet(accessToken: string, path: string): Promise<unknown> {
+  const res = await fetch(`${STRAVA_API_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw new Error(`Strava request failed: ${res.status} ${path} ${await res.text()}`);
+  return res.json();
+}
+
+/** Full activity detail — includes splits_standard/splits_metric, laps,
+ * device_watts and weighted_average_watts (used for power banding + drift). */
+export function fetchActivityDetail(accessToken: string, activityId: string): Promise<unknown> {
+  return stravaGet(accessToken, `/activities/${activityId}`);
+}
+
+/** Per-record time-series streams, keyed by type. Only the keys structuring
+ * consumes are requested; latlng is deliberately omitted — it keeps GPS out of
+ * saved eval fixtures. */
+export function fetchActivityStreams(accessToken: string, activityId: string): Promise<unknown> {
+  const keys = 'time,heartrate,velocity_smooth,watts,cadence,altitude,distance,moving,grade_smooth';
+  return stravaGet(accessToken, `/activities/${activityId}/streams?keys=${keys}&key_by_type=true`);
+}
+
+/** Athlete HR + power zones. Requires the profile:read_all scope — callers
+ * should tolerate this rejecting and fall back to a one-time max-HR entry. */
+export function fetchAthleteZones(accessToken: string): Promise<unknown> {
+  return stravaGet(accessToken, '/athlete/zones');
+}
+
+/** Detailed athlete — the `ftp` field (for power zones) needs profile:read_all. */
+export function fetchAthlete(accessToken: string): Promise<unknown> {
+  return stravaGet(accessToken, '/athlete');
+}
