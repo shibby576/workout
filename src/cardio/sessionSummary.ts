@@ -40,7 +40,9 @@ export interface SessionSummary {
   structure?: SessionStructure; // intervals/laps, when detectable
 
   // The headline "did the execution match the stated intent" computation.
-  intentBand: IntentBandResult;
+  // Absent when neither HR nor power was recorded — there is nothing to band
+  // against, and inventing a verdict would be worse than admitting the gap.
+  intentBand?: IntentBandResult;
 
   // Deterministic, factual observations — the anti-hallucination lever. The
   // model turns these into language; it never recomputes them.

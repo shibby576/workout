@@ -84,6 +84,13 @@ For **vo2max**, Z5 *is* the target, so overcooking can't be seen as a zone once
 (`SustainabilitySummary`), matching the convention that every rep should be
 repeatable and the first should feel controlled.
 
+**Pace banding is deliberately absent.** HR zones come from Strava/max-HR and
+power zones from FTP, but *pace* zones need a threshold-pace or VDOT anchor that
+Strava doesn't expose. Rather than invent one and silently skew every result,
+banding uses power when available and HR otherwise; pace still drives splits and
+drift. Adding pace banding means adding a threshold-pace input — a deliberate
+future choice, not an oversight.
+
 **Rep intensity is judged on power AND HR together** (`reachedTargetBy`):
 output confirms the effort, HR confirms the physiological response, and either
 can carry the judgement. This also absorbs HR lag — HR needs 60–90s to climb
@@ -126,7 +133,12 @@ Defer a real datastore until cross-device / multi-user matters.
    - Endpoints: `api/strava/{list,session,profile}.ts`; fetch helpers added to
      `_lib.ts`. Reading zones/FTP needs the `profile:read_all` scope — profile
      endpoint degrades to nulls (→ manual max-HR) when it's absent.
-2. Structuring module — pure, unit-tested → `SessionSummary`; save fixtures.
+2. Structuring module — pure, unit-tested → `SessionSummary`; save fixtures. ✅
+   - `zones.ts` (bound resolution), `structuring.ts` (the computation),
+     `structuring.test.ts` (19 tests, `npm test` — Node's built-in runner with
+     type stripping, no new deps).
+   - `scripts/capture-fixture.mjs` captures real sessions into
+     `evals/fixtures/`, scrubbing GPS.
 3. Select-workout + intent UI.
 4. Generation — server-side `/api/coach/generate`, provider-abstracted, one-shot.
 5. Feedback card UI.
