@@ -119,14 +119,34 @@ export interface SessionStructure {
   source: 'device-laps' | 'stream-detected';
   workReps: number; // count of hard efforts detected
   reps?: RepSegment[]; // kept intentionally light for v1
+  sustainability?: SustainabilitySummary; // present when there are >= 2 work reps
 }
 
 export interface RepSegment {
   index: number;
   durationSec: number;
   avgHr?: number;
+  avgWatts?: number;
   paceSecPerMi?: number;
   kind: 'work' | 'recovery';
+  // Did this rep reach the intent's target intensity? Judged on power/pace AND
+  // HR together: output confirms the effort, HR confirms the physiological
+  // response. Either can carry the judgement, which also absorbs HR lag (HR
+  // takes 60-90s to climb into Z5, so short reps look easy by HR alone).
+  reachedTargetBy?: ('power' | 'pace' | 'hr')[];
+  hitTarget?: boolean;
+}
+
+// Rep-to-rep sustainability — the "went out too hard" signal for interval
+// sessions. For vo2max this is the primary overcooking detector, since the
+// collapsed 5-zone model can't distinguish VO2 intensity from sprinting.
+export interface SustainabilitySummary {
+  // Output decline from the first work rep to the last, as a %. Positive =
+  // faded; near zero = held; negative = negative split across reps.
+  fadePct: number;
+  basis: 'power' | 'pace';
+  repsHittingTarget: number;
+  totalWorkReps: number;
 }
 
 export interface IntentBandResult {
@@ -139,6 +159,14 @@ export interface IntentBandResult {
   belowBandSec: number;
   aboveBandSec: number;
   inBandPct: number; // the headline number
+  // Which direction the session actually missed, per the intent's fault rules
+  // (see intentBands.ts). 'none' when it landed in band. Asymmetric on purpose:
+  // an easy day run too hard and a threshold set run too easy are different
+  // mistakes, and 'too hard' is a fault for every intent except vo2max.
+  fault: 'none' | 'too-easy' | 'too-hard';
+  // Low when banding rested on HR alone (or summary data), where lag and
+  // day-to-day HR variation make the band read imprecise.
+  confidence: 'high' | 'low';
 }
 
 export interface Signal {

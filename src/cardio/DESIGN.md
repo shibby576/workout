@@ -59,10 +59,36 @@ facts rather than inferring them — the biggest anti-hallucination lever, and t
 thing evals will measure as *faithfulness*.
 
 ### Intent → band mapping is explicit and versioned
-"How much of the session fell into the band implied by the intent" requires a
-defined mapping (recovery ≈ Z1/low-Z2, base ≈ Z2, threshold ≈ tempo/Z3–low-Z4,
-vo2max ≈ Z4–Z5). It lives in one version-controlled config; `intentBand`
-records `configVersion` and `primaryMetric` so results are reproducible.
+Lives in one version-controlled config (`intentBands.ts`); `intentBand` records
+`configVersion` and `primaryMetric` so results are reproducible.
+
+**Zone model.** The 5-zone scale, shared by HR and power. Power's native
+7-zone Coggan model is collapsed by merging Z5/Z6/Z7 → 5 (no v1 intent targets
+pure sprint work). Zone *boundaries* come from the athlete's own Strava zones
+where available, else %HRmax estimates; the config only says which zones each
+intent targets.
+
+**Faults are asymmetric — "too hard" is a fault for almost every intent:**
+
+| Intent | Target | Below band | Above band | "Too hard" seen via |
+|---|---|---|---|---|
+| recovery | Z1 (Z2 ok) | — | fault | zone |
+| base | Z2 (Z1 ok) | — | fault | zone (Z3 grey zone) |
+| threshold | Z3–Z4 | fault | fault | zone (into Z5) + rep fade |
+| vo2max | Z4–Z5 | fault | n/a (Z5 is the ceiling) | rep fade |
+
+Threshold is a **both-sided** band: below Z3 misses the stimulus, into Z5 is
+overcooked — threshold work must stay sustainable at/near lactate threshold.
+For **vo2max**, Z5 *is* the target, so overcooking can't be seen as a zone once
+5/6/7 are merged; it shows up as **rep-to-rep fade** instead
+(`SustainabilitySummary`), matching the convention that every rep should be
+repeatable and the first should feel controlled.
+
+**Rep intensity is judged on power AND HR together** (`reachedTargetBy`):
+output confirms the effort, HR confirms the physiological response, and either
+can carry the judgement. This also absorbs HR lag — HR needs 60–90s to climb
+into Z5, so short reps read as easy on HR alone. When banding rests on HR only,
+`intentBand.confidence` drops to `low` rather than faking precision.
 
 ### Storage — two-tier, no database in v1
 - **Eval tier (version-controlled):** on card generation, save raw Strava payload

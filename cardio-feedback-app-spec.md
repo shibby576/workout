@@ -82,6 +82,24 @@ broaden across workouts, disciplines, and data sources.
   Includes a **regenerate** action (useful for eyeballing model variance during
   the eval phase).
 
+## Judging a session against its intent
+
+Each intent maps to a target zone band (5-zone scale, shared by HR and power).
+Missing the band is judged **asymmetrically** — being too hard is a fault for
+almost every intent, not just being too easy:
+
+- **recovery** (Z1, Z2 tolerated) and **base** (Z2) — going *above* band is the
+  fault; there's no such thing as too easy.
+- **threshold** (Z3–Z4) — a *both-sided* band. Too easy misses the stimulus;
+  pushing into Z5 is overcooked, since threshold work must stay sustainable.
+- **vo2max** (Z4–Z5) — Z5 *is* the target, so overcooking isn't visible as a
+  zone; it shows up as **rep-to-rep fade** (reps should be repeatable).
+
+Interval intensity is judged on **power and HR together** — output confirms the
+effort, HR confirms the response, either can carry it. This also absorbs HR lag
+(HR needs 60–90s to reach Z5, so short reps look easy by HR alone). Banding on
+HR alone reports low confidence rather than false precision.
+
 ## Metrics: HR vs. power
 
 Power/pace measure **external load** (work produced); HR measures **internal
