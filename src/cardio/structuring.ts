@@ -579,6 +579,40 @@ function deriveSignals(s: SessionSummary, intent: IntentType): Signal[] {
     if (ib.confidence === 'low') {
       signals.push({ code: 'low_banding_confidence', detail: { judgedBy: ib.primaryMetric } });
     }
+
+    // Excursions that sit under the fault bar. The verdict stays coarse on
+    // purpose — a few minutes of drift shouldn't flip a session to "failed" —
+    // but the note should still be able to mention it, which is where the
+    // nuance belongs. peakZone matters most: two minutes in Z4 on a recovery
+    // day reads very differently from two minutes in Z3.
+    const zs = s.power?.zoneSeconds ?? s.heartRate?.zoneSeconds;
+    const peakZoneOutside = (dir: 'above' | 'below'): HrZone | undefined => {
+      if (!zs) return undefined;
+      const lowest = Math.min(...ib.targetZones);
+      const highest = Math.max(...ib.targetZones);
+      const outside = ZONES.filter((z) => (dir === 'above' ? z > highest : z < lowest)).filter((z) => zs[z] > 0);
+      return outside.length ? (dir === 'above' ? Math.max(...outside) : Math.min(...outside)) as HrZone : undefined;
+    };
+
+    if (ib.fault !== 'too-hard' && ib.aboveBandSec > 0) {
+      signals.push({
+        code: 'time_above_band',
+        detail: {
+          sec: ib.aboveBandSec,
+          pct: Math.round((ib.aboveBandSec / Math.max(1, ib.inBandSec + ib.tolerantSec + ib.belowBandSec + ib.aboveBandSec)) * 1000) / 10,
+          ...(peakZoneOutside('above') ? { peakZone: peakZoneOutside('above')! } : {}),
+        },
+      });
+    }
+    if (ib.fault !== 'too-easy' && ib.belowBandSec > 0) {
+      signals.push({
+        code: 'time_below_band',
+        detail: {
+          sec: ib.belowBandSec,
+          pct: Math.round((ib.belowBandSec / Math.max(1, ib.inBandSec + ib.tolerantSec + ib.belowBandSec + ib.aboveBandSec)) * 1000) / 10,
+        },
+      });
+    }
   } else {
     signals.push({ code: 'cannot_band', detail: { reason: 'no HR or power data' } });
   }

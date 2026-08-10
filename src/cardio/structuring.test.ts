@@ -151,6 +151,37 @@ describe('band accounting', () => {
     assert.ok(s.signals.some((x) => x.code === 'zone_mismatch' && typeof x.detail?.offBandSec === 'number'));
   });
 
+  // The verdict stays coarse; the note carries the nuance. These signals are
+  // what give the generation step something to be nuanced *about*.
+  it('flags sub-fault drift so the note can mention it', () => {
+    const n = 1000;
+    const s = run(
+      {
+        time: stream(Array.from({ length: n }, (_, i) => i)),
+        heartrate: stream(Array.from({ length: n }, (_, i) => (i < 850 ? 125 : 160))), // 15% in Z4
+      },
+      'recovery',
+    );
+    assert.equal(s.intentBand?.fault, 'none', 'under the fault bar, as agreed');
+    const drift = s.signals.find((x) => x.code === 'time_above_band');
+    assert.ok(drift, 'the note still needs to know about it');
+    assert.equal(drift?.detail?.peakZone, 4, 'Z4 on a recovery day reads differently from Z3');
+    assert.ok((drift?.detail?.sec as number) > 100);
+  });
+
+  it('does not double-report drift that already caused a fault', () => {
+    const n = 1000;
+    const s = run(
+      {
+        time: stream(Array.from({ length: n }, (_, i) => i)),
+        heartrate: stream(Array.from({ length: n }, (_, i) => (i < 600 ? 125 : 160))),
+      },
+      'recovery',
+    );
+    assert.equal(s.intentBand?.fault, 'too-hard');
+    assert.ok(!s.signals.some((x) => x.code === 'time_above_band'));
+  });
+
   it('keeps acceptable equal to in-band when the intent tolerates nothing', () => {
     const s = run(steady(600, 160), 'threshold'); // Z4, no tolerated zones
     assert.equal(s.intentBand?.tolerantSec, 0);
