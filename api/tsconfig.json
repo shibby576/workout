@@ -3,6 +3,10 @@
     "target": "es2022",
     "module": "esnext",
     "moduleResolution": "bundler",
+    // The coach endpoint shares prompt/provider code with the frontend and the
+    // eval scripts, and those modules use explicit .ts specifiers so Node's
+    // type stripping can resolve them.
+    "allowImportingTsExtensions": true,
     "lib": ["ES2023"],
     "types": ["node"],
     "strict": true,

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { isStravaConnected } from '../lib/strava';
+import { coachErrorMessage, generateCoachNote } from './coach.ts';
 import { FeedbackCard } from './components/FeedbackCard.tsx';
 import { IntentPicker } from './components/IntentPicker.tsx';
 import { SelectWorkout } from './components/SelectWorkout.tsx';
@@ -28,6 +29,10 @@ export function App() {
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [cardError, setCardError] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
+
+  const [note, setNote] = useState<string | null>(null);
+  const [noteLoading, setNoteLoading] = useState(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
 
   const step: Step = !connected || !setupDone ? 'setup' : summary || building ? 'card' : activity ? 'intent' : 'select';
 
@@ -92,13 +97,32 @@ export function App() {
     setSetupDone(true);
   }
 
+  const writeNote = useCallback(async (forSummary: SessionSummary) => {
+    setNoteLoading(true);
+    setNoteError(null);
+    try {
+      const result = await generateCoachNote(forSummary);
+      setNote(result.note);
+    } catch (err) {
+      setNoteError(coachErrorMessage(err instanceof Error ? err.message : ''));
+    } finally {
+      setNoteLoading(false);
+    }
+  }, []);
+
   async function handlePickIntent(intent: IntentType) {
     if (!activity) return;
     setBuilding(true);
     setCardError(null);
+    setNote(null);
+    setNoteError(null);
     try {
       const raw = await stravaSource.getSession(String(activity.id));
-      setSummary(structureSession({ raw, intent, athlete: profile }));
+      const built = structureSession({ raw, intent, athlete: profile });
+      setSummary(built);
+      // Structuring is instant; generation is the slow part, so the metrics
+      // render immediately and the note fills in behind it.
+      void writeNote(built);
     } catch {
       setCardError("Couldn't load that session from Strava.");
     } finally {
@@ -110,6 +134,8 @@ export function App() {
     setActivity(null);
     setSummary(null);
     setCardError(null);
+    setNote(null);
+    setNoteError(null);
   }
 
   return (
@@ -152,12 +178,10 @@ export function App() {
           {summary && (
             <FeedbackCard
               summary={summary}
-              note={null}
-              noteLoading={false}
-              noteError={null}
-              onRegenerate={() => {
-                /* wired up in the generation step */
-              }}
+              note={note}
+              noteLoading={noteLoading}
+              noteError={noteError}
+              onRegenerate={() => void writeNote(summary)}
             />
           )}
         </>
