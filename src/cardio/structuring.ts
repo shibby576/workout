@@ -354,26 +354,29 @@ function computeIntentBand(
   const highest = Math.max(...band.targetZones);
 
   let inBandSec = 0;
+  let tolerantSec = 0;
   let belowBandSec = 0;
   let aboveBandSec = 0;
   for (const z of ZONES) {
     const sec = zoneSeconds[z];
     if (sec <= 0) continue;
-    // Tolerated zones count as neither in-band nor a miss.
+    // Tolerated zones are acceptable but not the target — tracked separately so
+    // they can be reported without being counted as a miss.
     if (target.has(z)) inBandSec += sec;
-    else if (tolerant.has(z)) continue;
+    else if (tolerant.has(z)) tolerantSec += sec;
     else if (z < lowest) belowBandSec += sec;
     else if (z > highest) aboveBandSec += sec;
   }
 
-  const judged = inBandSec + belowBandSec + aboveBandSec;
-  const inBandPct = judged > 0 ? Math.round((inBandSec / judged) * 1000) / 10 : 0;
+  const total = inBandSec + tolerantSec + belowBandSec + aboveBandSec;
+  const pct = (n: number) => (total > 0 ? Math.round((n / total) * 1000) / 10 : 0);
 
-  // A miss only counts as a fault if the config says that direction is one.
+  // Faults are measured against the whole session: drifting above band for a
+  // quarter of the time is a miss regardless of how the rest is classified.
   const overSec = band.aboveIsFault ? aboveBandSec : 0;
   const underSec = band.belowIsFault ? belowBandSec : 0;
   let fault: IntentBandResult['fault'] = 'none';
-  if (Math.max(overSec, underSec) > judged * 0.25) {
+  if (Math.max(overSec, underSec) > total * 0.25) {
     fault = overSec >= underSec ? 'too-hard' : 'too-easy';
   }
 
@@ -383,9 +386,11 @@ function computeIntentBand(
     targetZones: band.targetZones,
     scope,
     inBandSec: Math.round(inBandSec),
+    tolerantSec: Math.round(tolerantSec),
     belowBandSec: Math.round(belowBandSec),
     aboveBandSec: Math.round(aboveBandSec),
-    inBandPct,
+    inBandPct: pct(inBandSec),
+    acceptablePct: pct(inBandSec + tolerantSec),
     fault,
     // HR-only banding is imprecise: HR lags the effort and drifts with heat,
     // sleep and hydration, so we say so rather than implying false precision.
@@ -556,10 +561,20 @@ function deriveSignals(s: SessionSummary, intent: IntentType): Signal[] {
     if (ib.fault !== 'none') {
       signals.push({
         code: 'zone_mismatch',
-        detail: { intent, fault: ib.fault, inBandPct: ib.inBandPct, judgedBy: ib.primaryMetric },
+        detail: {
+          intent,
+          fault: ib.fault,
+          inBandPct: ib.inBandPct,
+          acceptablePct: ib.acceptablePct,
+          offBandSec: ib.fault === 'too-hard' ? ib.aboveBandSec : ib.belowBandSec,
+          judgedBy: ib.primaryMetric,
+        },
       });
     } else {
-      signals.push({ code: 'on_target', detail: { intent, inBandPct: ib.inBandPct } });
+      signals.push({
+        code: 'on_target',
+        detail: { intent, inBandPct: ib.inBandPct, acceptablePct: ib.acceptablePct },
+      });
     }
     if (ib.confidence === 'low') {
       signals.push({ code: 'low_banding_confidence', detail: { judgedBy: ib.primaryMetric } });

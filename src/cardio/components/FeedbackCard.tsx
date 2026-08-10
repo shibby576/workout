@@ -44,13 +44,13 @@ export function FeedbackCard({ summary, note, noteLoading, noteError, onRegenera
           {!intentBand
             ? 'No heart rate or power recorded'
             : onTarget
-              ? `On target — ${intentBand.inBandPct}% in the ${intentLabel.toLowerCase()} band`
+              ? `On target — ${headlinePct(intentBand)}% in the ${intentLabel.toLowerCase()} band`
               : FAULT_HEADLINE[intentBand.fault as 'too-easy' | 'too-hard']}
         </div>
         <div className="verdict-sub">
           {!intentBand
             ? "Without HR or power there's no way to judge intensity — pace and splits below still apply."
-            : `${intentBand.inBandPct}% of moving time in zone${intentBand.targetZones.length > 1 ? 's' : ''} ${intentBand.targetZones.join('–')}, judged on ${METRIC_LABEL[intentBand.primaryMetric]}.`}
+            : bandBreakdown(intentBand, intentLabel)}
         </div>
       </div>
 
@@ -201,6 +201,36 @@ export function FeedbackCard({ summary, note, noteLoading, noteError, onRegenera
       </div>
     </>
   );
+}
+
+/** Where the intent tolerates easier zones, "acceptable" is the honest headline:
+ *  a recovery run mostly in Z2 with a few minutes of drift is ~76% fine, and
+ *  leading with the strict 44% would imply half of it was wrong. */
+function headlinePct(band: NonNullable<SessionSummary['intentBand']>): number {
+  return band.tolerantSec > 0 ? band.acceptablePct : band.inBandPct;
+}
+
+/** Proportions of the whole session, plus how much drifted and in which
+ *  direction — so the numbers add up to what the athlete actually did. */
+function bandBreakdown(band: NonNullable<SessionSummary['intentBand']>, label: string): string {
+  const judgedOn = `judged on ${METRIC_LABEL[band.primaryMetric]}`;
+  const scope = band.scope === 'work-reps' ? ' across the work reps' : '';
+
+  const offSec = band.fault === 'too-hard' ? band.aboveBandSec : band.belowBandSec;
+  const direction = band.fault === 'too-hard' ? 'above' : 'below';
+
+  if (band.tolerantSec > 0) {
+    const base = `${band.acceptablePct}% at ${label.toLowerCase()} effort or easier${scope}`;
+    return band.fault === 'none'
+      ? `${base}, ${judgedOn}.`
+      : `${base}, but ${duration(offSec)} drifted ${direction} it — ${judgedOn}.`;
+  }
+
+  const zones = `zone${band.targetZones.length > 1 ? 's' : ''} ${band.targetZones.join('–')}`;
+  const base = `${band.inBandPct}% of time in ${zones}${scope}`;
+  return band.fault === 'none'
+    ? `${base}, ${judgedOn}.`
+    : `${base}, with ${duration(offSec)} ${direction} the band — ${judgedOn}.`;
 }
 
 /** Why being off-pace matters depends on the intent: running an easy day hard

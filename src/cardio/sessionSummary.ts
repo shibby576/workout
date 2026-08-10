@@ -169,10 +169,18 @@ export interface IntentBandResult {
   // would make every correctly-executed interval session read as "too easy" —
   // easy recoveries are the design, not a miss.
   scope: 'work-reps' | 'whole-session';
-  inBandSec: number;
+  // These four partition the judged time, so they always sum to it.
+  inBandSec: number; // in the target zones
+  tolerantSec: number; // in zones the intent tolerates (e.g. Z2 on a recovery day)
   belowBandSec: number;
   aboveBandSec: number;
-  inBandPct: number; // the headline number
+  // Percentages of the WHOLE judged time, so they read as honest proportions.
+  inBandPct: number; // strictly in the target zones
+  // In-band plus tolerated. This is the headline for intents with tolerated
+  // zones: a recovery run mostly in Z2 with a few minutes of drift is ~76%
+  // acceptable, and reporting only the strict 44% would imply half the run was
+  // wrong when it wasn't.
+  acceptablePct: number;
   // Which direction the session actually missed, per the intent's fault rules
   // (see intentBands.ts). 'none' when it landed in band. Asymmetric on purpose:
   // an easy day run too hard and a threshold set run too easy are different

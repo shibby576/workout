@@ -1,5 +1,6 @@
 import {
   ensureFreshTokens,
+  fetchActivities,
   fetchAthlete,
   fetchAthleteZones,
   parseCookies,
@@ -22,5 +23,19 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   const zones = await fetchAthleteZones(tokens.accessToken).catch(() => null);
   const athlete = (await fetchAthlete(tokens.accessToken).catch(() => null)) as { ftp?: number | null } | null;
 
-  res.status(200).json({ zones, ftp: athlete?.ftp ?? null });
+  // Strava exposes no max-HR field on the athlete, but every activity carries
+  // max_heartrate. The highest actually recorded across recent training is a
+  // far better anchor than 220-age (which carries a ~10-12bpm standard
+  // deviation — routinely a full zone out). Used to seed the setup field,
+  // which stays editable.
+  const observedMaxHr = await fetchActivities(tokens.accessToken, 100)
+    .then((activities) => {
+      const maxima = (activities as { max_heartrate?: number }[])
+        .map((a) => a.max_heartrate)
+        .filter((hr): hr is number => typeof hr === 'number' && hr > 0);
+      return maxima.length ? Math.max(...maxima) : null;
+    })
+    .catch(() => null);
+
+  res.status(200).json({ zones, ftp: athlete?.ftp ?? null, observedMaxHr });
 }

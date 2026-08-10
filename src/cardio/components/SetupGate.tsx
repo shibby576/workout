@@ -9,6 +9,8 @@ import type { AthleteProfile } from '../zones.ts';
 interface Props {
   connected: boolean;
   profile: AthleteProfile;
+  /** Highest max HR across recent Strava activities — seeds the field. */
+  observedMaxHr: number | null;
   onSave(profile: AthleteProfile): void;
   redirectNote: string | null;
 }
@@ -23,11 +25,12 @@ function parsePace(input: string): number | null {
   return Number.isFinite(plain) && plain > 0 ? plain : null;
 }
 
-export function SetupGate({ connected, profile, onSave, redirectNote }: Props) {
-  const [maxHr, setMaxHr] = useState(profile.maxHr ? String(profile.maxHr) : '');
+export function SetupGate({ connected, profile, observedMaxHr, onSave, redirectNote }: Props) {
+  const [maxHr, setMaxHr] = useState(String(profile.maxHr ?? observedMaxHr ?? ''));
   const [thresholdPace, setThresholdPace] = useState(
     profile.thresholdPaceSecPerMi ? formatPaceInput(profile.thresholdPaceSecPerMi) : '',
   );
+  const [runningFtp, setRunningFtp] = useState(profile.runningFtp ? String(profile.runningFtp) : '');
 
   if (!connected) {
     return (
@@ -63,8 +66,9 @@ export function SetupGate({ connected, profile, onSave, redirectNote }: Props) {
         <div className="field">
           <label htmlFor="maxhr">Max heart rate</label>
           <div className="hint">
-            Your Strava zones weren't available, so zones are estimated from this. The highest number you've
-            actually seen in a hard effort beats a formula.
+            {observedMaxHr
+              ? `Pre-filled with ${observedMaxHr} bpm — the highest reading across your recent Strava activities. Raise it if you've seen higher in an all-out effort.`
+              : "Your Strava zones weren't available, so zones are estimated from this. The highest number you've actually seen in a hard effort beats a formula."}
           </div>
           <input
             id="maxhr"
@@ -91,12 +95,21 @@ export function SetupGate({ connected, profile, onSave, redirectNote }: Props) {
         />
       </div>
 
-      {profile.ftp ? (
-        <div className="field">
-          <label>FTP</label>
-          <div className="hint">{profile.ftp} W from Strava — power sessions will be judged on power.</div>
+      <div className="field">
+        <label htmlFor="rftp">Running threshold power (optional)</label>
+        <div className="hint">
+          If you run with a power meter, the power you could hold for about an hour (Stryd calls this rFTPw).
+          Setting it upgrades intensity judging from heart rate — which lags and drifts — to power. Separate
+          from cycling FTP{profile.ftp ? ` (${profile.ftp} W from Strava)` : ''}, and a much higher number.
         </div>
-      ) : null}
+        <input
+          id="rftp"
+          inputMode="numeric"
+          placeholder="320"
+          value={runningFtp}
+          onChange={(e) => setRunningFtp(e.target.value)}
+        />
+      </div>
 
       <button
         type="button"
@@ -107,6 +120,7 @@ export function SetupGate({ connected, profile, onSave, redirectNote }: Props) {
             ...profile,
             maxHr: Number.isFinite(parsedHr) && parsedHr > 0 ? parsedHr : profile.maxHr,
             thresholdPaceSecPerMi: parsePace(thresholdPace),
+            runningFtp: Number(runningFtp) > 0 ? Number(runningFtp) : null,
           })
         }
       >

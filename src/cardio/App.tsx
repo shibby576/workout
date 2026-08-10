@@ -18,6 +18,7 @@ export function App() {
   const [profile, setProfile] = useState<AthleteProfile>(loadProfile());
   const [setupDone, setSetupDone] = useState(() => isProfileReady(loadProfile()));
   const [redirectNote, setRedirectNote] = useState<string | null>(null);
+  const [observedMaxHr, setObservedMaxHr] = useState<number | null>(null);
 
   const [activities, setActivities] = useState<StravaActivitySummary[]>([]);
   const [listState, setListState] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -49,6 +50,7 @@ export function App() {
       .getProfile()
       .then((p) => {
         if (cancelled) return;
+        setObservedMaxHr(p.observedMaxHr ?? null);
         setProfile((prev) => {
           const merged = { ...prev, zones: p.zones ?? prev.zones, ftp: p.ftp ?? prev.ftp };
           saveProfile(merged);
@@ -125,6 +127,7 @@ export function App() {
         <SetupGate
           connected={connected}
           profile={profile}
+          observedMaxHr={observedMaxHr}
           onSave={handleSaveProfile}
           redirectNote={redirectNote}
         />

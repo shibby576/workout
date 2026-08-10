@@ -106,6 +106,58 @@ describe('intent banding', () => {
   });
 });
 
+describe('band accounting', () => {
+  it('partitions the judged time — the four buckets sum to the total', () => {
+    const n = 1200;
+    // Half Z2 (tolerated on a recovery day), half Z4 (above band).
+    const s = run(
+      {
+        time: stream(Array.from({ length: n }, (_, i) => i)),
+        heartrate: stream(Array.from({ length: n }, (_, i) => (i < n / 2 ? 125 : 160))),
+      },
+      'recovery',
+    );
+    const b = s.intentBand!;
+    assert.equal(b.inBandSec + b.tolerantSec + b.belowBandSec + b.aboveBandSec, n - 1);
+  });
+
+  it('reports acceptable time separately from strictly in-band', () => {
+    // Mirrors the real Lunch Run: mostly Z2 with a few minutes drifting up.
+    const n = 1000;
+    const s = run(
+      {
+        time: stream(Array.from({ length: n }, (_, i) => i)),
+        heartrate: stream(Array.from({ length: n }, (_, i) => (i < 800 ? 125 : 160))),
+      },
+      'recovery',
+    );
+    const b = s.intentBand!;
+    // Strictly in Z1: none. But 80% was at recovery effort or easier.
+    assert.equal(b.inBandPct, 0);
+    assert.ok(b.acceptablePct >= 79 && b.acceptablePct <= 81, `got ${b.acceptablePct}`);
+    assert.equal(b.fault, 'none'); // 20% drift is under the quarter-session bar
+  });
+
+  it('still faults when drift exceeds a quarter of the session', () => {
+    const n = 1000;
+    const s = run(
+      {
+        time: stream(Array.from({ length: n }, (_, i) => i)),
+        heartrate: stream(Array.from({ length: n }, (_, i) => (i < 600 ? 125 : 160))),
+      },
+      'recovery',
+    );
+    assert.equal(s.intentBand?.fault, 'too-hard');
+    assert.ok(s.signals.some((x) => x.code === 'zone_mismatch' && typeof x.detail?.offBandSec === 'number'));
+  });
+
+  it('keeps acceptable equal to in-band when the intent tolerates nothing', () => {
+    const s = run(steady(600, 160), 'threshold'); // Z4, no tolerated zones
+    assert.equal(s.intentBand?.tolerantSec, 0);
+    assert.equal(s.intentBand?.acceptablePct, s.intentBand?.inBandPct);
+  });
+});
+
 describe('graceful degradation', () => {
   it('omits intentBand and says so when there is no HR or power', () => {
     const s = run({ time: stream(Array.from({ length: 100 }, (_, i) => i)) }, 'base');

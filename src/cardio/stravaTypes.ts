@@ -93,6 +93,9 @@ export interface StravaAthleteZones {
 export interface StravaProfile {
   zones: StravaAthleteZones | null;
   ftp: number | null;
+  // Highest max_heartrate seen across recent activities. Strava has no athlete
+  // max-HR field, so this seeds the setup entry from real data.
+  observedMaxHr: number | null;
 }
 
 // What /api/strava/session returns for a single activity.
