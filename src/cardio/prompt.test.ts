@@ -138,7 +138,15 @@ describe('prompt system instructions', () => {
     const p = promptFor(steady(600, 125), 'base');
     assert.match(p.system, /Direct and analytical/);
     assert.match(p.system, /2 to 4 sentences/);
+    assert.match(p.system, /60 words maximum/);
     assert.match(p.system, /No pep talk/);
+  });
+
+  it('bans the filler that made early drafts wordy', () => {
+    const p = promptFor(steady(600, 125), 'base');
+    assert.match(p.system, /Terse\. Short declarative sentences\./);
+    assert.match(p.system, /worth flagging/); // listed as a phrase to cut
+    assert.match(p.system, /Mention a metric only if it changes the verdict or the advice/);
   });
 
   it('forbids inventing or recomputing numbers', () => {
