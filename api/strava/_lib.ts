@@ -133,10 +133,15 @@ export function fetchActivityDetail(accessToken: string, activityId: string): Pr
 
 /** Per-record time-series streams, keyed by type. Only the keys structuring
  * consumes are requested; latlng is deliberately omitted — it keeps GPS out of
- * saved eval fixtures. */
+ * saved eval fixtures.
+ *
+ * series_type=time is explicit rather than left to the default (distance):
+ * every downstream computation is time-weighted, and Strava is documented to
+ * reject distance-series requests for activities with incomplete distance data
+ * (treadmills, stationary work). */
 export function fetchActivityStreams(accessToken: string, activityId: string): Promise<unknown> {
   const keys = 'time,heartrate,velocity_smooth,watts,cadence,altitude,distance,moving,grade_smooth';
-  return stravaGet(accessToken, `/activities/${activityId}/streams?keys=${keys}&key_by_type=true`);
+  return stravaGet(accessToken, `/activities/${activityId}/streams?keys=${keys}&key_by_type=true&series_type=time`);
 }
 
 /** Athlete HR + power zones. Requires the profile:read_all scope — callers

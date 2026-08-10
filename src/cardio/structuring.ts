@@ -403,7 +403,9 @@ export function structureSession(input: StructuringInput): SessionSummary {
     laps: Boolean(detail.laps?.length),
     streamResolution: hasStreams ? 'high' : 'summary-only',
     zonesSource: hrZones?.source ?? 'estimated-from-maxhr',
-    ftpSource: powerZones ? (athlete.ftp && athlete.zones?.power ? 'strava' : 'entered') : 'none',
+    // FTP only ever arrives from Strava's /athlete today; 'entered' is reserved
+    // for a manual FTP field if one is added.
+    ftpSource: powerZones ? 'strava' : 'none',
   };
 
   // --- pace / distance ---
@@ -470,13 +472,20 @@ export function structureSession(input: StructuringInput): SessionSummary {
   const workWindows = structure?.reps?.filter((r) => r.kind === 'work').map((r) => ({ startSec: r.startSec, endSec: r.endSec }));
   const scope: IntentBandResult['scope'] = workWindows?.length ? 'work-reps' : 'whole-session';
 
+  // Banding needs actual time in zones. Summary-only activities (no streams —
+  // manual entries, some treadmill work) have an average HR but no per-record
+  // data, so every zone total is 0; banding that would render a confident
+  // "on target, 0%" verdict out of nothing.
+  const totalZoneSec = (zs: Record<HrZone, number>) => ZONES.reduce((a, z) => a + zs[z], 0);
+
   let intentBand: IntentBandResult | undefined;
   if (power && powerZones) {
     const zs = scope === 'work-reps' ? accumulateZoneSeconds(samples, wattsData, powerZones.bounds, workWindows) : power.zoneSeconds;
-    intentBand = computeIntentBand(intent, zs, 'power', scope);
-  } else if (heartRate && hrZones) {
+    if (totalZoneSec(zs) > 0) intentBand = computeIntentBand(intent, zs, 'power', scope);
+  }
+  if (!intentBand && heartRate && hrZones) {
     const zs = scope === 'work-reps' ? accumulateZoneSeconds(samples, hrData, hrZones.bounds, workWindows) : heartRate.zoneSeconds;
-    intentBand = computeIntentBand(intent, zs, 'hr', scope);
+    if (totalZoneSec(zs) > 0) intentBand = computeIntentBand(intent, zs, 'hr', scope);
   }
 
   const summary: SessionSummary = {

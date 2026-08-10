@@ -227,6 +227,76 @@ describe('interval structure', () => {
   });
 });
 
+describe('summary-only activities (no streams)', () => {
+  // Strava returns 404/400 for streams on manual entries and some stationary
+  // work; the API layer degrades to {} rather than failing the request.
+  it('does not fabricate a verdict from zero zone time', () => {
+    const raw: RawSession = {
+      detail: detail({ average_heartrate: 150, max_heartrate: 165 }),
+      streams: {},
+    };
+    const s = structureSession({ raw, intent: 'base', athlete: ATHLETE });
+    assert.equal(s.availability.streamResolution, 'summary-only');
+    // The bug this guards: all zone totals are 0, which previously rendered a
+    // confident "on target — 0%".
+    assert.equal(s.intentBand, undefined);
+    assert.ok(s.signals.some((x) => x.code === 'cannot_band'));
+    assert.ok(s.signals.some((x) => x.code === 'summary_data_only'));
+  });
+
+  it('still reports the summary figures it does have', () => {
+    const raw: RawSession = {
+      detail: detail({ average_heartrate: 150, max_heartrate: 165 }),
+      streams: {},
+    };
+    const s = structureSession({ raw, intent: 'base', athlete: ATHLETE });
+    assert.equal(s.heartRate?.avg, 150);
+    assert.equal(s.heartRate?.max, 165);
+    assert.equal(s.distance?.miles, 5);
+    assert.ok(s.paceTarget); // pace targets need no streams
+  });
+});
+
+describe('Strava-supplied zones', () => {
+  // Real /athlete/zones shape: 5 HR zones, open top bound marked -1.
+  const stravaZones = {
+    heart_rate: {
+      custom_zones: true,
+      zones: [
+        { min: 0, max: 115 },
+        { min: 115, max: 152 },
+        { min: 152, max: 171 },
+        { min: 171, max: 190 },
+        { min: 190, max: -1 },
+      ],
+    },
+  };
+
+  it('prefers the athlete configured zones over the max-HR estimate', () => {
+    const raw: RawSession = { detail: detail(), streams: steady(600, 160) };
+    const s = structureSession({
+      raw,
+      intent: 'threshold',
+      athlete: { ...ATHLETE, ftp: null, zones: stravaZones },
+    });
+    assert.equal(s.availability.zonesSource, 'strava');
+    // 160bpm sits in Strava Z3 (152-171); the 190 max-HR estimate would put it
+    // in Z4 (152-171 vs 133-152 boundaries differ).
+    assert.equal(s.heartRate?.zoneBounds[3].minBpm, 152);
+    assert.equal(s.intentBand?.fault, 'none'); // threshold targets Z3-Z4
+  });
+
+  it('treats the -1 top bound as open-ended', () => {
+    const raw: RawSession = { detail: detail(), streams: steady(600, 205) };
+    const s = structureSession({
+      raw,
+      intent: 'vo2max',
+      athlete: { ...ATHLETE, ftp: null, zones: stravaZones },
+    });
+    assert.equal(s.heartRate?.zoneSeconds[5], 599);
+  });
+});
+
 describe('interval banding scope', () => {
   // 4 x (300s hard @ Z5, 300s easy @ Z2). A correctly-executed VO2 session:
   // the recoveries are supposed to be easy.

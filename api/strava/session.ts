@@ -25,9 +25,16 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   }
 
   try {
+    // Streams are best-effort: Strava returns 404/400 for activities with
+    // incomplete data (manual entries, some treadmill/stationary work). That
+    // must not fail the whole request — structuring degrades to summary fields
+    // and reports streamResolution: 'summary-only'.
     const [detail, streams] = await Promise.all([
       fetchActivityDetail(tokens.accessToken, id),
-      fetchActivityStreams(tokens.accessToken, id),
+      fetchActivityStreams(tokens.accessToken, id).catch((err) => {
+        console.warn(`No streams for activity ${id}:`, err instanceof Error ? err.message : err);
+        return {};
+      }),
     ]);
     res.status(200).json({ detail, streams });
   } catch (err) {
