@@ -12,7 +12,7 @@ import type { StructuringInput } from './structuring.ts';
 import type { AthleteProfile } from './zones.ts';
 import type { RawSession, StravaActivityDetail, StravaStreamSet } from './stravaTypes.ts';
 
-const ATHLETE: AthleteProfile = { zones: null, ftp: 250, maxHr: 190 };
+const ATHLETE: AthleteProfile = { zones: null, ftp: 250, maxHr: 190, thresholdPaceSecPerMi: 420 }; // 7:00/mi
 // maxHr 190 => Z1 <114, Z2 114-133, Z3 133-152, Z4 152-171, Z5 171+
 // ftp 250   => Z1 <=137, Z2 138-187, Z3 188-225, Z4 226-262, Z5 263+
 
@@ -45,6 +45,15 @@ function steady(n: number, hr: number): StravaStreamSet {
 function run(streams: StravaStreamSet, intent: StructuringInput['intent'], over: Partial<StravaActivityDetail> = {}) {
   const raw: RawSession = { detail: detail(over), streams };
   return structureSession({ raw, intent, athlete: { ...ATHLETE, ftp: null } });
+}
+
+/** Same as run(), but with a distance/time giving a known session pace. */
+function runAtPace(paceSecPerMi: number, intent: StructuringInput['intent'], hr = 125) {
+  const miles = 5;
+  return run(steady(600, hr), intent, {
+    distance: miles * 1609.344,
+    moving_time: Math.round(paceSecPerMi * miles),
+  });
 }
 
 describe('intent banding', () => {
@@ -215,6 +224,116 @@ describe('interval structure', () => {
   it('flags when an interval intent produced a steady session', () => {
     const s = run(steady(600, 170), 'vo2max');
     assert.ok(s.signals.some((x) => x.code === 'expected_intervals_but_steady'));
+  });
+});
+
+describe('interval banding scope', () => {
+  // 4 x (300s hard @ Z5, 300s easy @ Z2). A correctly-executed VO2 session:
+  // the recoveries are supposed to be easy.
+  const n = 2400;
+  const streams: StravaStreamSet = {
+    time: stream(Array.from({ length: n }, (_, i) => i)),
+    heartrate: stream(Array.from({ length: n }, (_, i) => (i % 600 < 300 ? 178 : 130))),
+  };
+  const laps = Array.from({ length: 8 }, (_, i) => ({
+    lap_index: i + 1,
+    moving_time: 300,
+    elapsed_time: 300,
+    distance: i % 2 === 0 ? 1300 : 500,
+    average_speed: i % 2 === 0 ? 4.33 : 1.67,
+    average_heartrate: i % 2 === 0 ? 178 : 130,
+  }));
+
+  it('judges interval sessions on work reps, not recovery jogs', () => {
+    const s = run(streams, 'vo2max', { laps });
+    assert.equal(s.intentBand?.scope, 'work-reps');
+    // Without this, the easy recoveries would drag it to ~50% and fault it.
+    assert.equal(s.intentBand?.inBandPct, 100);
+    assert.equal(s.intentBand?.fault, 'none');
+  });
+
+  it('still judges steady sessions over the whole session', () => {
+    const s = run(steady(600, 125), 'base');
+    assert.equal(s.intentBand?.scope, 'whole-session');
+  });
+
+  it('builds rep windows from cumulative elapsed time', () => {
+    const s = run(streams, 'vo2max', { laps });
+    const reps = s.structure?.reps ?? [];
+    assert.equal(reps[0].startSec, 0);
+    assert.equal(reps[0].endSec, 300);
+    assert.equal(reps[1].startSec, 300);
+    assert.equal(reps[2].startSec, 600);
+  });
+
+  it('still faults an interval session whose work reps were too easy', () => {
+    const easyStreams: StravaStreamSet = {
+      time: stream(Array.from({ length: n }, (_, i) => i)),
+      // Work reps only reach Z3 — genuinely under-cooked for vo2max.
+      heartrate: stream(Array.from({ length: n }, (_, i) => (i % 600 < 300 ? 140 : 120))),
+    };
+    const s = run(easyStreams, 'vo2max', { laps });
+    assert.equal(s.intentBand?.scope, 'work-reps');
+    assert.equal(s.intentBand?.fault, 'too-easy');
+  });
+});
+
+describe('pace targets', () => {
+  // Threshold pace 7:00/mi (420s). base = 0.75-0.84x speed => 8:20-9:20/mi.
+  it('accepts a base run inside the target pace range', () => {
+    const s = runAtPace(520, 'base'); // 8:40/mi
+    assert.equal(s.paceTarget?.verdict, 'in-range');
+    assert.equal(s.paceTarget?.basis, 'session-average');
+    assert.ok(s.signals.some((x) => x.code === 'pace_on_target'));
+  });
+
+  it('tells you when an easy run was run too fast', () => {
+    const s = runAtPace(460, 'base'); // 7:40/mi — quicker than the fast bound
+    assert.equal(s.paceTarget?.verdict, 'too-fast');
+    assert.ok(s.signals.some((x) => x.code === 'pace_off_target' && x.detail?.verdict === 'too-fast'));
+  });
+
+  it('tells you when a session was run too slow', () => {
+    const s = runAtPace(600, 'base'); // 10:00/mi
+    assert.equal(s.paceTarget?.verdict, 'too-slow');
+  });
+
+  it('derives the target range from threshold pace, fast bound first', () => {
+    const pt = runAtPace(520, 'base').paceTarget;
+    assert.equal(pt?.thresholdPaceSecPerMi, 420);
+    assert.equal(pt?.targetFastSecPerMi, 500); // 420 / 0.84
+    assert.equal(pt?.targetSlowSecPerMi, 560); // 420 / 0.75
+    assert.ok(pt!.targetFastSecPerMi < pt!.targetSlowSecPerMi);
+  });
+
+  it('scales the range with the intent — vo2max targets faster than threshold', () => {
+    const vo2 = runAtPace(400, 'vo2max').paceTarget;
+    const thr = runAtPace(420, 'threshold').paceTarget;
+    assert.ok(vo2!.targetFastSecPerMi < thr!.targetFastSecPerMi);
+    assert.equal(thr?.verdict, 'in-range');
+  });
+
+  it('judges intervals on work reps, not the session average', () => {
+    const laps = [
+      { lap_index: 1, moving_time: 180, elapsed_time: 180, distance: 800, average_speed: 4.4, average_heartrate: 175 },
+      { lap_index: 2, moving_time: 120, elapsed_time: 120, distance: 300, average_speed: 2.5, average_heartrate: 130 },
+      { lap_index: 3, moving_time: 180, elapsed_time: 180, distance: 780, average_speed: 4.3, average_heartrate: 176 },
+    ];
+    const s = run(steady(600, 170), 'vo2max', { laps });
+    assert.equal(s.paceTarget?.basis, 'work-reps');
+    // Work reps ~4.35 m/s => ~6:10/mi, faster than the session average would be.
+    assert.ok(s.paceTarget!.actualSecPerMi < 400);
+  });
+
+  it('omits pace targets when no threshold pace is set', () => {
+    const raw: RawSession = { detail: detail(), streams: steady(600, 125) };
+    const s = structureSession({
+      raw,
+      intent: 'base',
+      athlete: { ...ATHLETE, ftp: null, thresholdPaceSecPerMi: null },
+    });
+    assert.equal(s.paceTarget, undefined);
+    assert.ok(s.signals.some((x) => x.code === 'no_pace_target'));
   });
 });
 

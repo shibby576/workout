@@ -1,9 +1,21 @@
+import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      // Two independent apps in one deploy: the original tracker at / and the
+      // standalone cardio feedback app at /cardio.html. They share nothing but
+      // the Strava API routes and the design tokens.
+      input: {
+        main: resolve(import.meta.dirname, 'index.html'),
+        cardio: resolve(import.meta.dirname, 'cardio.html'),
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

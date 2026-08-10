@@ -84,12 +84,24 @@ For **vo2max**, Z5 *is* the target, so overcooking can't be seen as a zone once
 (`SustainabilitySummary`), matching the convention that every rep should be
 repeatable and the first should feel controlled.
 
-**Pace banding is deliberately absent.** HR zones come from Strava/max-HR and
-power zones from FTP, but *pace* zones need a threshold-pace or VDOT anchor that
-Strava doesn't expose. Rather than invent one and silently skew every result,
-banding uses power when available and HR otherwise; pace still drives splits and
-drift. Adding pace banding means adding a threshold-pace input — a deliberate
-future choice, not an oversight.
+**Interval sessions are banded on WORK reps only** (`intentBand.scope`).
+Counting the recovery jogs made every correctly-executed interval session read
+as "too easy" — the easy recoveries are the design, not a miss. Rep windows come
+from cumulative lap elapsed time, matched against stream timestamps. (Caught by
+running the real UI, not by the type-checker — the whole-session version looked
+perfectly reasonable in code.)
+
+**Pace targets answer a different question than zones.** Zones say whether the
+*effort* was right; pace says whether the *speed* was. A run can sit in the right
+HR zone and still be too fast or too slow for the session type, so both are
+shown. Targets are ratios on threshold speed (`PACE_TARGETS`), following the
+standard Daniels-style relationships between easy/threshold/interval paces —
+ratios rather than fixed offsets so they hold across ability levels. The anchor
+is a one-time threshold-pace entry (~1-hour race pace); Strava exposes nothing
+usable. Without it, pace targets are simply omitted.
+
+Note this means *effort* banding still uses power, else HR — never pace, which
+would need the same anchor to define zones.
 
 **Rep intensity is judged on power AND HR together** (`reachedTargetBy`):
 output confirms the effort, HR confirms the physiological response, and either
@@ -139,7 +151,11 @@ Defer a real datastore until cross-device / multi-user matters.
      type stripping, no new deps).
    - `scripts/capture-fixture.mjs` captures real sessions into
      `evals/fixtures/`, scrubbing GPS.
-3. Select-workout + intent UI.
+3. Select-workout + intent UI. ✅
+   - Standalone entry at `/cardio.html` (Vite multi-page); shares only the
+     Strava API routes and design tokens with the tracker.
+   - `App.tsx` (flow), `components/` (SetupGate, SelectWorkout, IntentPicker,
+     FeedbackCard), `profile.ts` (localStorage), `format.ts`, `cardio.css`.
 4. Generation — server-side `/api/coach/generate`, provider-abstracted, one-shot.
 5. Feedback card UI.
 6. **Collaborative eval session** (not before generation exists): define rubric

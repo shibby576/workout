@@ -43,6 +43,28 @@ export interface IntentBand {
   note: string;
 }
 
+// Target pace ranges per intent, as multipliers on THRESHOLD SPEED (higher =
+// faster). Threshold pace ~= the pace you could hold for about an hour, and the
+// ratios follow the standard Daniels-style relationships between easy /
+// marathon / threshold / interval paces. Ratios (not fixed offsets) keep this
+// correct across ability levels — 20s/mi means something different to a 6:00
+// runner than a 12:00 one.
+//
+// Kept separate from the zone band because it answers a different question:
+// zones say whether the *effort* was right, pace says whether the *speed* was.
+// A run can be in the right HR zone but too slow, or on pace but over-cooked.
+export interface PaceTarget {
+  minSpeedRatio: number; // slow end of the range
+  maxSpeedRatio: number; // fast end of the range
+}
+
+export const PACE_TARGETS: Record<IntentType, PaceTarget> = {
+  recovery: { minSpeedRatio: 0.68, maxSpeedRatio: 0.78 },
+  base: { minSpeedRatio: 0.75, maxSpeedRatio: 0.84 },
+  threshold: { minSpeedRatio: 0.97, maxSpeedRatio: 1.03 },
+  vo2max: { minSpeedRatio: 1.04, maxSpeedRatio: 1.1 },
+};
+
 export const INTENT_BANDS: Record<IntentType, IntentBand> = {
   recovery: {
     targetZones: [1],

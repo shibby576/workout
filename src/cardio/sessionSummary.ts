@@ -44,6 +44,10 @@ export interface SessionSummary {
   // against, and inventing a verdict would be worse than admitting the gap.
   intentBand?: IntentBandResult;
 
+  // Was the SPEED right for the intent? Complements intentBand, which judges
+  // effort. Absent without a threshold-pace anchor.
+  paceTarget?: PaceTargetResult;
+
   // Deterministic, factual observations — the anti-hallucination lever. The
   // model turns these into language; it never recomputes them.
   signals: Signal[];
@@ -126,6 +130,8 @@ export interface SessionStructure {
 
 export interface RepSegment {
   index: number;
+  startSec: number; // offset from activity start
+  endSec: number;
   durationSec: number;
   avgHr?: number;
   avgWatts?: number;
@@ -157,6 +163,10 @@ export interface IntentBandResult {
   // availability/sport priority (power > pace for runs; power for bikes; HR last).
   primaryMetric: 'power' | 'pace' | 'hr';
   targetZones: HrZone[]; // the zones this intent implies
+  // Interval sessions are judged on WORK time only. Counting the recovery jogs
+  // would make every correctly-executed interval session read as "too easy" —
+  // easy recoveries are the design, not a miss.
+  scope: 'work-reps' | 'whole-session';
   inBandSec: number;
   belowBandSec: number;
   aboveBandSec: number;
@@ -169,6 +179,20 @@ export interface IntentBandResult {
   // Low when banding rested on HR alone (or summary data), where lag and
   // day-to-day HR variation make the band read imprecise.
   confidence: 'high' | 'low';
+}
+
+// Target pace for the stated intent vs. what was actually run. Pace is in
+// seconds per mile, so *lower is faster* — hence "fast"/"slow" bounds rather
+// than min/max, which invert confusingly.
+export interface PaceTargetResult {
+  thresholdPaceSecPerMi: number; // the anchor this was derived from
+  targetFastSecPerMi: number; // fast end of the target range
+  targetSlowSecPerMi: number; // slow end of the target range
+  actualSecPerMi: number;
+  // Work reps for interval sessions (recoveries would drag the average down),
+  // whole-session average otherwise.
+  basis: 'work-reps' | 'session-average';
+  verdict: 'in-range' | 'too-fast' | 'too-slow';
 }
 
 export interface Signal {

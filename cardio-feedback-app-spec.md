@@ -98,7 +98,15 @@ almost every intent, not just being too easy:
 Interval intensity is judged on **power and HR together** — output confirms the
 effort, HR confirms the response, either can carry it. This also absorbs HR lag
 (HR needs 60–90s to reach Z5, so short reps look easy by HR alone). Banding on
-HR alone reports low confidence rather than false precision.
+HR alone reports low confidence rather than false precision. Interval sessions
+are banded on **work reps only** — recovery jogs are meant to be easy, and
+counting them made every good interval session read as "too easy".
+
+**Target pace.** Zones judge *effort*; pace judges *speed*, and a session can be
+in the right zone yet too fast or too slow for its type. Each intent carries a
+target pace range derived from a one-time **threshold pace** entry (~1-hour race
+pace), so the card can say "you went too fast/too slow" alongside "too hard/too
+easy". Optional — without the anchor, pace targets are omitted.
 
 ## Metrics: HR vs. power
 

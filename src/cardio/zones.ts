@@ -12,6 +12,9 @@ export interface AthleteProfile {
   zones: StravaAthleteZones | null; // from Strava, when profile:read_all is granted
   ftp: number | null; // watts
   maxHr: number | null; // fallback for HR zones when Strava zones are absent
+  // ~1-hour race pace, in seconds per mile. The anchor for pace targets;
+  // Strava doesn't expose it, so it's entered once in setup.
+  thresholdPaceSecPerMi: number | null;
 }
 
 export interface ZoneBoundsBpm {

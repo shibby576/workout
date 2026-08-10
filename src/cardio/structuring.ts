@@ -9,6 +9,7 @@
 import {
   INTENT_BANDS,
   INTENT_BAND_CONFIG_VERSION,
+  PACE_TARGETS,
 } from './intentBands.ts';
 import type {
   DataAvailability,
@@ -18,6 +19,7 @@ import type {
   IntentBandResult,
   IntentType,
   PaceSummary,
+  PaceTargetResult,
   PowerSummary,
   RepSegment,
   SessionStructure,
@@ -74,16 +76,25 @@ function zeroZoneSeconds(): Record<HrZone, number> {
   return { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 }
 
-/** Time-weighted zone accumulation over moving samples. */
+interface TimeWindow {
+  startSec: number;
+  endSec: number;
+}
+
+/** Time-weighted zone accumulation over moving samples. When `windows` is
+ *  given, only samples falling inside them count — used to judge interval
+ *  sessions on work time alone. */
 function accumulateZoneSeconds(
   samples: Sample[],
   values: number[] | undefined,
   bounds: Record<HrZone, { minBpm: number; maxBpm: number } | { minWatts: number; maxWatts: number }>,
+  windows?: TimeWindow[],
 ): Record<HrZone, number> {
   const out = zeroZoneSeconds();
   if (!values) return out;
   samples.forEach((s, i) => {
     if (!s.moving || s.dt <= 0) return;
+    if (windows && !windows.some((w) => s.t >= w.startSec && s.t < w.endSec)) return;
     const v = values[i];
     if (typeof v !== 'number' || Number.isNaN(v)) return;
     out[zoneOf(v, bounds)] += s.dt;
@@ -197,14 +208,23 @@ function detectStructureFromLaps(
   if (outputs.some((o) => !o) || !hasIntervalSpread(outputs)) return undefined;
 
   const isWork = classifyEfforts(outputs);
-  const reps: RepSegment[] = laps.map((l, i) => ({
-    index: i + 1,
-    durationSec: l.moving_time,
-    avgHr: l.average_heartrate,
-    avgWatts: l.average_watts,
-    paceSecPerMi: l.average_speed > 0 ? METERS_PER_MILE / l.average_speed : undefined,
-    kind: isWork[i] ? 'work' : 'recovery',
-  }));
+  // Stream timestamps are elapsed seconds from the start, so rep windows are
+  // built from cumulative elapsed time to line the two up.
+  let cursor = 0;
+  const reps: RepSegment[] = laps.map((l, i) => {
+    const startSec = cursor;
+    cursor += l.elapsed_time;
+    return {
+      index: i + 1,
+      startSec,
+      endSec: cursor,
+      durationSec: l.moving_time,
+      avgHr: l.average_heartrate,
+      avgWatts: l.average_watts,
+      paceSecPerMi: l.average_speed > 0 ? METERS_PER_MILE / l.average_speed : undefined,
+      kind: isWork[i] ? 'work' : 'recovery',
+    };
+  });
 
   return { source: 'device-laps', workReps: reps.filter((r) => r.kind === 'work').length, reps };
 }
@@ -259,6 +279,45 @@ function computeSustainability(structure: SessionStructure): SustainabilitySumma
   };
 }
 
+/** Target pace for the intent vs. what was actually run. Answers "did I go too
+ *  fast or too slow", which zone banding can't: a run can sit in the right HR
+ *  zone but be well off the pace the session called for. */
+function computePaceTarget(
+  intent: IntentType,
+  thresholdPaceSecPerMi: number | null,
+  pace: PaceSummary | undefined,
+  structure: SessionStructure | undefined,
+): PaceTargetResult | undefined {
+  if (!thresholdPaceSecPerMi || thresholdPaceSecPerMi <= 0 || !pace || pace.avgPaceSecPerMi <= 0) return undefined;
+
+  // For intervals, judge the work reps — recoveries would drag the average
+  // toward "too slow" and hide what the hard efforts actually did.
+  const workPaces =
+    structure?.reps?.filter((r) => r.kind === 'work' && typeof r.paceSecPerMi === 'number').map((r) => r.paceSecPerMi!) ??
+    [];
+  const useWork = workPaces.length > 0;
+  const actualSecPerMi = Math.round(useWork ? mean(workPaces) : pace.avgPaceSecPerMi);
+
+  // pace = thresholdPace / speedRatio, so the FAST bound comes from the
+  // HIGHER ratio.
+  const t = PACE_TARGETS[intent];
+  const targetFastSecPerMi = Math.round(thresholdPaceSecPerMi / t.maxSpeedRatio);
+  const targetSlowSecPerMi = Math.round(thresholdPaceSecPerMi / t.minSpeedRatio);
+
+  let verdict: PaceTargetResult['verdict'] = 'in-range';
+  if (actualSecPerMi < targetFastSecPerMi) verdict = 'too-fast';
+  else if (actualSecPerMi > targetSlowSecPerMi) verdict = 'too-slow';
+
+  return {
+    thresholdPaceSecPerMi,
+    targetFastSecPerMi,
+    targetSlowSecPerMi,
+    actualSecPerMi,
+    basis: useWork ? 'work-reps' : 'session-average',
+    verdict,
+  };
+}
+
 /** The headline "did execution match intent" computation. Faults are
  *  asymmetric per intentBands.ts — an easy day run hard and a threshold set run
  *  easy are different mistakes. */
@@ -266,6 +325,7 @@ function computeIntentBand(
   intent: IntentType,
   zoneSeconds: Record<HrZone, number>,
   primaryMetric: 'power' | 'pace' | 'hr',
+  scope: IntentBandResult['scope'],
 ): IntentBandResult {
   const band = INTENT_BANDS[intent];
   const target = new Set<HrZone>(band.targetZones);
@@ -301,6 +361,7 @@ function computeIntentBand(
     configVersion: INTENT_BAND_CONFIG_VERSION,
     primaryMetric,
     targetZones: band.targetZones,
+    scope,
     inBandSec: Math.round(inBandSec),
     belowBandSec: Math.round(belowBandSec),
     aboveBandSec: Math.round(aboveBandSec),
@@ -402,11 +463,20 @@ export function structureSession(input: StructuringInput): SessionSummary {
   // Power is the better judge (direct, instantaneous); HR is the fallback.
   // Pace banding is deliberately absent: it needs a threshold-pace/VDOT anchor
   // that Strava doesn't expose, and guessing one would skew every result.
+  //
+  // For interval sessions, band the WORK reps only: the recovery jogs are
+  // meant to be easy, so counting them would make every well-executed interval
+  // session read as "too easy".
+  const workWindows = structure?.reps?.filter((r) => r.kind === 'work').map((r) => ({ startSec: r.startSec, endSec: r.endSec }));
+  const scope: IntentBandResult['scope'] = workWindows?.length ? 'work-reps' : 'whole-session';
+
   let intentBand: IntentBandResult | undefined;
-  if (power) {
-    intentBand = computeIntentBand(intent, power.zoneSeconds, 'power');
-  } else if (heartRate) {
-    intentBand = computeIntentBand(intent, heartRate.zoneSeconds, 'hr');
+  if (power && powerZones) {
+    const zs = scope === 'work-reps' ? accumulateZoneSeconds(samples, wattsData, powerZones.bounds, workWindows) : power.zoneSeconds;
+    intentBand = computeIntentBand(intent, zs, 'power', scope);
+  } else if (heartRate && hrZones) {
+    const zs = scope === 'work-reps' ? accumulateZoneSeconds(samples, hrData, hrZones.bounds, workWindows) : heartRate.zoneSeconds;
+    intentBand = computeIntentBand(intent, zs, 'hr', scope);
   }
 
   const summary: SessionSummary = {
@@ -431,6 +501,7 @@ export function structureSession(input: StructuringInput): SessionSummary {
     drift,
     structure,
     intentBand,
+    paceTarget: computePaceTarget(intent, athlete.thresholdPaceSecPerMi, pace, structure),
     signals: [],
   };
 
@@ -462,6 +533,22 @@ function deriveSignals(s: SessionSummary, intent: IntentType): Signal[] {
     }
   } else {
     signals.push({ code: 'cannot_band', detail: { reason: 'no HR or power data' } });
+  }
+
+  if (s.paceTarget) {
+    const pt = s.paceTarget;
+    signals.push({
+      code: pt.verdict === 'in-range' ? 'pace_on_target' : 'pace_off_target',
+      detail: {
+        verdict: pt.verdict,
+        actualSecPerMi: pt.actualSecPerMi,
+        targetFastSecPerMi: pt.targetFastSecPerMi,
+        targetSlowSecPerMi: pt.targetSlowSecPerMi,
+        basis: pt.basis,
+      },
+    });
+  } else {
+    signals.push({ code: 'no_pace_target', detail: { reason: 'no threshold pace set' } });
   }
 
   // Dominant zone — the "what did this session actually look like" read.
