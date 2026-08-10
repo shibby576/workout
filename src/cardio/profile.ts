@@ -13,10 +13,17 @@ interface StoredProfile {
   maxHr: number | null;
   thresholdPaceSecPerMi: number | null;
   ftp: number | null;
+  runningFtp: number | null;
   zones: StravaAthleteZones | null;
 }
 
-const EMPTY: StoredProfile = { maxHr: null, thresholdPaceSecPerMi: null, ftp: null, zones: null };
+const EMPTY: StoredProfile = {
+  maxHr: null,
+  thresholdPaceSecPerMi: null,
+  ftp: null,
+  runningFtp: null,
+  zones: null,
+};
 
 export function loadProfile(): AthleteProfile {
   try {

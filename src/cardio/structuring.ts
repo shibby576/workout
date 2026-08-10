@@ -33,6 +33,7 @@ import {
   ZONES,
   resolveHrZones,
   resolvePowerZones,
+  thresholdPowerFor,
   zoneOf,
   type AthleteProfile,
   type ResolvedHrZones,
@@ -191,12 +192,31 @@ function classifyEfforts(outputs: number[]): boolean[] {
   return outputs.map((o) => o >= midpoint);
 }
 
-/** True when efforts vary enough to look like intervals rather than a steady
- *  effort with normal noise. */
-function hasIntervalSpread(outputs: number[]): boolean {
+function spreadRatio(outputs: number[]): number {
   const min = Math.min(...outputs);
   const max = Math.max(...outputs);
-  return min > 0 && (max - min) / min > 0.15;
+  return min > 0 ? (max - min) / min : 0;
+}
+
+/** Auto-lap sessions trigger a lap every fixed distance (1mi / 1km), so every
+ *  lap but the last carries an identical distance. Real interval sessions have
+ *  work and recovery laps of differing length — unless the recoveries happen to
+ *  match the reps, which is why the caller still checks output spread. */
+function looksLikeAutoLaps(laps: StravaLap[]): boolean {
+  const full = laps.slice(0, -1).map((l) => l.distance);
+  if (full.length < 2) return false;
+  return spreadRatio(full) < 0.02;
+}
+
+/** True when efforts vary enough to look like intervals rather than a steady
+ *  effort with normal noise.
+ *
+ *  Auto-lapped runs need a much higher bar: a real mile-split run drifts 10-20%
+ *  across splits from hills, fatigue or a fast finish, which is not an interval
+ *  session. Genuine repeats (e.g. 400s at 4.5m/s off 2.5m/s jogs) clear 25%
+ *  comfortably. */
+function hasIntervalSpread(outputs: number[], autoLapped: boolean): boolean {
+  return spreadRatio(outputs) > (autoLapped ? 0.25 : 0.15);
 }
 
 function detectStructureFromLaps(
@@ -205,7 +225,7 @@ function detectStructureFromLaps(
 ): SessionStructure | undefined {
   if (laps.length < 3) return undefined;
   const outputs = laps.map((l) => (usePower ? (l.average_watts ?? 0) : l.average_speed));
-  if (outputs.some((o) => !o) || !hasIntervalSpread(outputs)) return undefined;
+  if (outputs.some((o) => !o) || !hasIntervalSpread(outputs, looksLikeAutoLaps(laps))) return undefined;
 
   const isWork = classifyEfforts(outputs);
   // Stream timestamps are elapsed seconds from the start, so rep windows are
@@ -386,8 +406,9 @@ export function structureSession(input: StructuringInput): SessionSummary {
   const wattsData = streams.watts?.data;
   const speedData = streams.velocity_smooth?.data;
 
+  const sportType = detail.sport_type || detail.type;
   const hrZones = resolveHrZones(athlete);
-  const powerZones = resolvePowerZones(athlete);
+  const powerZones = resolvePowerZones(thresholdPowerFor(sportType, athlete));
 
   const hasHr = Boolean(hrData?.length) || Boolean(detail.average_heartrate);
   const hasPower = Boolean(wattsData?.length) || typeof detail.average_watts === 'number';
@@ -435,17 +456,20 @@ export function structureSession(input: StructuringInput): SessionSummary {
   }
 
   // --- power ---
+  // Reported whenever watts exist, even with no threshold to band against:
+  // average and normalized power are useful facts on their own, and silently
+  // dropping a power meter's data because no FTP is set loses real signal.
   let power: PowerSummary | undefined;
-  if (hasPower && powerZones) {
+  if (hasPower) {
     const values = wattsData ?? [];
     const valid = values.filter((v) => typeof v === 'number' && v >= 0);
     const np = wattsData ? normalizedPower(samples, wattsData) : detail.weighted_average_watts;
     power = {
       avgWatts: Math.round(valid.length ? mean(valid) : (detail.average_watts ?? 0)),
       normalizedWatts: np,
-      intensityFactor: np ? Math.round((np / powerZones.ftp) * 100) / 100 : undefined,
-      zoneSeconds: accumulateZoneSeconds(samples, wattsData, powerZones.bounds),
-      zoneBounds: powerZones.bounds,
+      intensityFactor: np && powerZones ? Math.round((np / powerZones.ftp) * 100) / 100 : undefined,
+      zoneSeconds: powerZones ? accumulateZoneSeconds(samples, wattsData, powerZones.bounds) : undefined,
+      zoneBounds: powerZones?.bounds,
     };
   }
 
@@ -479,7 +503,7 @@ export function structureSession(input: StructuringInput): SessionSummary {
   const totalZoneSec = (zs: Record<HrZone, number>) => ZONES.reduce((a, z) => a + zs[z], 0);
 
   let intentBand: IntentBandResult | undefined;
-  if (power && powerZones) {
+  if (power?.zoneSeconds && powerZones) {
     const zs = scope === 'work-reps' ? accumulateZoneSeconds(samples, wattsData, powerZones.bounds, workWindows) : power.zoneSeconds;
     if (totalZoneSec(zs) > 0) intentBand = computeIntentBand(intent, zs, 'power', scope);
   }
@@ -558,6 +582,15 @@ function deriveSignals(s: SessionSummary, intent: IntentType): Signal[] {
     });
   } else {
     signals.push({ code: 'no_pace_target', detail: { reason: 'no threshold pace set' } });
+  }
+
+  // A power meter we can't band against — worth surfacing, since setting a
+  // threshold would move this session from low- to high-confidence judging.
+  if (s.availability.power && !s.power?.zoneSeconds) {
+    signals.push({
+      code: 'power_without_threshold',
+      detail: { sport: s.activity.sportType, avgWatts: s.power?.avgWatts ?? 0 },
+    });
   }
 
   // Dominant zone — the "what did this session actually look like" read.

@@ -109,9 +109,11 @@ export interface HeartRateSummary {
 export interface PowerSummary {
   avgWatts: number;
   normalizedWatts?: number; // NP — variability-weighted average (cycling standard)
-  intensityFactor?: number; // NP / FTP
-  zoneSeconds: Record<HrZone, number>; // time in each power zone over moving time
-  zoneBounds: Record<HrZone, { minWatts: number; maxWatts: number }>;
+  intensityFactor?: number; // NP / threshold
+  // Zones need a threshold power for the sport. Absent when none is known —
+  // the watts are still reported, they just can't be banded.
+  zoneSeconds?: Record<HrZone, number>;
+  zoneBounds?: Record<HrZone, { minWatts: number; maxWatts: number }>;
 }
 
 export interface DriftSummary {

@@ -31,7 +31,8 @@ export function FeedbackCard({ summary, note, noteLoading, noteError, onRegenera
   const onTarget = intentBand?.fault === 'none';
 
   // Power zones when we banded on power, else HR zones.
-  const zoneSeconds = intentBand?.primaryMetric === 'power' ? power?.zoneSeconds : heartRate?.zoneSeconds;
+  const zoneSeconds =
+    intentBand?.primaryMetric === 'power' ? power?.zoneSeconds : heartRate?.zoneSeconds;
   const targetZones = new Set<HrZone>(intentBand?.targetZones ?? []);
   const zoneTotal = zoneSeconds ? ZONES.reduce((a, z) => a + zoneSeconds[z], 0) : 0;
 

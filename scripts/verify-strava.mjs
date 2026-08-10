@@ -61,6 +61,8 @@ const intent = arg('intent', 'base');
 const athlete = {
   zones: null,
   ftp: arg('ftp') ? Number(arg('ftp')) : null,
+  // Running power threshold — separate from cycling FTP, see zones.ts.
+  runningFtp: arg('running-ftp') ? Number(arg('running-ftp')) : null,
   maxHr: arg('max-hr') ? Number(arg('max-hr')) : 190,
   thresholdPaceSecPerMi: parsePace(arg('threshold-pace')),
 };
@@ -168,7 +170,7 @@ console.log(`  distance    : ${s.distance ? `${s.distance.miles} mi` : '—'}`);
 console.log(`  pace        : ${s.pace ? `${fmtPace(s.pace.avgPaceSecPerMi)}/mi, ${s.pace.splits.length} splits` : '—'}`);
 console.log(`  heart rate  : ${s.heartRate ? `avg ${s.heartRate.avg}, max ${s.heartRate.max}` : '—'}`);
 if (s.heartRate) console.log(`  HR zone secs: ${JSON.stringify(s.heartRate.zoneSeconds)}`);
-console.log(`  power       : ${s.power ? `avg ${s.power.avgWatts}W, NP ${s.power.normalizedWatts ?? '—'}` : '—'}`);
+console.log(`  power       : ${s.power ? `avg ${s.power.avgWatts}W, NP ${s.power.normalizedWatts ?? '—'}${s.power.zoneSeconds ? '' : ' (no threshold set — not banded)'}` : '—'}`);
 console.log(`  drift       : ${s.drift ? `${s.drift.decouplingPct}% (${s.drift.method})` : '—'}`);
 console.log(`  structure   : ${s.structure ? `${s.structure.workReps} work reps from ${s.structure.source}, fade ${s.structure.sustainability?.fadePct ?? '—'}%` : 'steady (no intervals detected)'}`);
 console.log(`  intent band : ${s.intentBand ? `${s.intentBand.inBandPct}% in Z${s.intentBand.targetZones.join('/')} by ${s.intentBand.primaryMetric}, scope=${s.intentBand.scope}, fault=${s.intentBand.fault}, confidence=${s.intentBand.confidence}` : 'NOT COMPUTED (no HR/power stream time)'}`);

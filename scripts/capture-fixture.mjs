@@ -53,7 +53,9 @@ if (!id || !token) {
 
 const [detail, streams] = await Promise.all([
   get(`/activities/${id}`, token),
-  get(`/activities/${id}/streams?keys=${STREAM_KEYS}&key_by_type=true`, token),
+  // series_type=time must match what the app requests (api/strava/_lib.ts), or
+  // fixtures won't represent what structuring actually receives at runtime.
+  get(`/activities/${id}/streams?keys=${STREAM_KEYS}&key_by_type=true&series_type=time`, token),
 ]);
 
 await mkdir(OUT_DIR, { recursive: true });

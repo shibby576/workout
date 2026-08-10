@@ -12,7 +12,14 @@ import type { StructuringInput } from './structuring.ts';
 import type { AthleteProfile } from './zones.ts';
 import type { RawSession, StravaActivityDetail, StravaStreamSet } from './stravaTypes.ts';
 
-const ATHLETE: AthleteProfile = { zones: null, ftp: 250, maxHr: 190, thresholdPaceSecPerMi: 420 }; // 7:00/mi
+// 7:00/mi threshold pace. ftp is the CYCLING number; runningFtp is separate.
+const ATHLETE: AthleteProfile = {
+  zones: null,
+  ftp: 250,
+  runningFtp: null,
+  maxHr: 190,
+  thresholdPaceSecPerMi: 420,
+};
 // maxHr 190 => Z1 <114, Z2 114-133, Z3 133-152, Z4 152-171, Z5 171+
 // ftp 250   => Z1 <=137, Z2 138-187, Z3 188-225, Z4 226-262, Z5 263+
 
@@ -116,20 +123,53 @@ describe('graceful degradation', () => {
     assert.ok(s.signals.some((x) => x.code === 'low_banding_confidence'));
   });
 
+  const poweredRun: StravaStreamSet = {
+    time: stream(Array.from({ length: 600 }, (_, i) => i)),
+    heartrate: stream(Array.from({ length: 600 }, () => 150)),
+    watts: stream(Array.from({ length: 600 }, () => 160)), // Z2 against a 250 threshold
+  };
+
   it('reports high confidence when banding on power', () => {
-    const streams: StravaStreamSet = {
-      time: stream(Array.from({ length: 600 }, (_, i) => i)),
-      heartrate: stream(Array.from({ length: 600 }, () => 150)),
-      watts: stream(Array.from({ length: 600 }, () => 160)), // Z2
-    };
     const s = structureSession({
-      raw: { detail: detail({ device_watts: true }), streams },
+      raw: { detail: detail({ device_watts: true }), streams: poweredRun },
       intent: 'base',
-      athlete: ATHLETE,
+      athlete: { ...ATHLETE, runningFtp: 250 },
     });
     assert.equal(s.intentBand?.primaryMetric, 'power');
     assert.equal(s.intentBand?.confidence, 'high');
     assert.equal(s.availability.powerSource, 'meter');
+  });
+
+  // Running power reads far higher than cycling power for the same athlete, so
+  // banding a run against a bike FTP would push every easy run toward Z5.
+  it('never bands a run against the cycling FTP', () => {
+    const s = structureSession({
+      raw: { detail: detail({ device_watts: true }), streams: poweredRun },
+      intent: 'base',
+      athlete: { ...ATHLETE, ftp: 250, runningFtp: null },
+    });
+    assert.equal(s.intentBand?.primaryMetric, 'hr');
+    assert.equal(s.power?.zoneSeconds, undefined);
+  });
+
+  it('still reports watts when there is no threshold to band them against', () => {
+    const s = structureSession({
+      raw: { detail: detail({ device_watts: true }), streams: poweredRun },
+      intent: 'base',
+      athlete: { ...ATHLETE, ftp: null, runningFtp: null },
+    });
+    assert.equal(s.power?.avgWatts, 160);
+    assert.ok(s.power?.normalizedWatts);
+    assert.ok(s.signals.some((x) => x.code === 'power_without_threshold'));
+  });
+
+  it('does band a ride against the cycling FTP', () => {
+    const s = structureSession({
+      raw: { detail: detail({ sport_type: 'Ride', device_watts: true }), streams: poweredRun },
+      intent: 'base',
+      athlete: { ...ATHLETE, ftp: 250, runningFtp: null },
+    });
+    assert.equal(s.intentBand?.primaryMetric, 'power');
   });
 });
 
@@ -224,6 +264,64 @@ describe('interval structure', () => {
   it('flags when an interval intent produced a steady session', () => {
     const s = run(steady(600, 170), 'vo2max');
     assert.ok(s.signals.some((x) => x.code === 'expected_intervals_but_steady'));
+  });
+});
+
+describe('auto-lap rejection (values from real captured runs)', () => {
+  // Strava auto-laps every mile, so a plain steady run arrives with laps that
+  // vary by 10-20% from hills, fatigue or a fast finish. Treating that as an
+  // interval session cascades: banding switches to work-reps scope and judges
+  // a fraction of the run.
+  const autoLap = (dist: number, watts: number, speed: number, i: number) => ({
+    lap_index: i + 1,
+    moving_time: 500,
+    elapsed_time: 500,
+    distance: dist,
+    average_speed: speed,
+    average_heartrate: 150,
+    average_watts: watts,
+  });
+
+  it('rejects the Lunch Run auto-laps (17.1% watt spread)', () => {
+    const laps = [
+      autoLap(1609.34, 291.5, 2.46, 0),
+      autoLap(1609.34, 291.5, 2.54, 1),
+      autoLap(1112.37, 341.3, 2.51, 2), // short final lap, faster finish
+    ];
+    const s = run(steady(600, 125), 'base', { laps });
+    assert.equal(s.structure, undefined, 'a steady run must not read as intervals');
+    assert.equal(s.intentBand?.scope, 'whole-session');
+  });
+
+  it('rejects the Morning Run auto-laps (13.6% watt spread)', () => {
+    const laps = [
+      autoLap(1609.34, 362.3, 3.09, 0),
+      autoLap(1609.34, 411.6, 3.46, 1),
+      autoLap(1609.34, 399.9, 3.35, 2),
+      autoLap(992.47, 380.3, 2.79, 3),
+    ];
+    const s = run(steady(600, 125), 'base', { laps });
+    assert.equal(s.structure, undefined);
+  });
+
+  it('still detects real repeats even on uniform lap distances', () => {
+    // 400m repeats off 400m jogs: same distance, but a huge output gap.
+    const laps = [0, 1, 2, 3, 4, 5].map((i) =>
+      autoLap(400, i % 2 === 0 ? 450 : 240, i % 2 === 0 ? 4.5 : 2.4, i),
+    );
+    const s = run(steady(600, 175), 'vo2max', { laps });
+    assert.equal(s.structure?.workReps, 3);
+  });
+
+  it('still detects intervals when lap distances differ', () => {
+    const laps = [
+      autoLap(800, 450, 4.5, 0),
+      autoLap(300, 240, 2.4, 1),
+      autoLap(800, 440, 4.4, 2),
+      autoLap(300, 240, 2.4, 3),
+    ];
+    const s = run(steady(600, 175), 'vo2max', { laps });
+    assert.equal(s.structure?.workReps, 2);
   });
 });
 

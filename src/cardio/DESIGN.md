@@ -84,6 +84,21 @@ For **vo2max**, Z5 *is* the target, so overcooking can't be seen as a zone once
 (`SustainabilitySummary`), matching the convention that every rep should be
 repeatable and the first should feel controlled.
 
+**Auto-laps are not intervals.** Strava auto-laps every mile, so an ordinary
+steady run arrives with 3–5 laps varying 10–20% from hills, fatigue or a fast
+finish. Both real captured runs tripped this. Detection now identifies auto-laps
+by their uniform distance (every lap but the last identical) and requires a much
+larger output spread (25% vs 15%) before calling them intervals — genuine
+repeats clear that easily. Misreading this cascades: banding switches to
+work-rep scope and judges only a fraction of the session.
+
+**Running power is not cycling power.** A power meter reports ~300–400W on runs
+where the same athlete's bike FTP might be 250. Strava's `ftp` field is
+cycling-only, so banding a run against it would push every easy run to Z5.
+`thresholdPowerFor()` picks by sport, and `runningFtp` is a separate profile
+field. Watts are still reported without a threshold — they just aren't banded
+(`power_without_threshold`).
+
 **Interval sessions are banded on WORK reps only** (`intentBand.scope`).
 Counting the recovery jogs made every correctly-executed interval session read
 as "too easy" — the easy recoveries are the design, not a miss. Rep windows come

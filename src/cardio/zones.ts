@@ -10,11 +10,23 @@ import type { StravaAthleteZones } from './stravaTypes';
 
 export interface AthleteProfile {
   zones: StravaAthleteZones | null; // from Strava, when profile:read_all is granted
-  ftp: number | null; // watts
+  ftp: number | null; // CYCLING functional threshold power, watts (Strava's `ftp`)
+  // Running threshold power (rFTPw / critical power), watts. A separate number
+  // from cycling FTP and typically far higher for the same athlete — running
+  // power meters report ~300-400W where that athlete's bike FTP might be 250.
+  // Banding running power against a cycling FTP would put every easy run in Z5,
+  // so the two are never interchanged.
+  runningFtp: number | null;
   maxHr: number | null; // fallback for HR zones when Strava zones are absent
   // ~1-hour race pace, in seconds per mile. The anchor for pace targets;
   // Strava doesn't expose it, so it's entered once in setup.
   thresholdPaceSecPerMi: number | null;
+}
+
+/** Threshold power for the sport at hand, or null when we don't have one.
+ *  Strava's `ftp` field is cycling-only. */
+export function thresholdPowerFor(sportType: string, profile: AthleteProfile): number | null {
+  return /ride|cycl/i.test(sportType) ? profile.ftp : profile.runningFtp;
 }
 
 export interface ZoneBoundsBpm {
@@ -86,11 +98,12 @@ export interface ResolvedPowerZones {
   ftp: number;
 }
 
-/** Power zones from FTP (Coggan, collapsed to 5). Null without an FTP — we
- *  don't guess power zones, since an invented FTP would silently skew banding. */
-export function resolvePowerZones(profile: AthleteProfile): ResolvedPowerZones | null {
-  if (!profile.ftp || profile.ftp <= 0) return null;
-  const ftp = profile.ftp;
+/** Power zones from a threshold power (Coggan %FTP, collapsed to 5). Null
+ *  without one — we don't guess, since an invented threshold would silently
+ *  skew every band. Pass the sport-appropriate value (see thresholdPowerFor). */
+export function resolvePowerZones(threshold: number | null): ResolvedPowerZones | null {
+  if (!threshold || threshold <= 0) return null;
+  const ftp = threshold;
   return {
     bounds: boundsFromUpperEdges(POWER_PCT_FTP, (min, max) => ({
       minWatts: Math.round(min * ftp),
