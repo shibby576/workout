@@ -1,0 +1,89 @@
+{
+  "version": "1",
+  "note": "An eval case is a (fixture, intent) PAIR. The same session becomes a different test depending on the intent attached to it, so deliberate mismatches are first-class cases. The athlete profile is pinned here for reproducibility — the app itself takes these per user from the setup gate and stores them per user; nothing is hardcoded in app code.",
+  "athlete": {
+    "zones": null,
+    "ftp": null,
+    "runningFtp": null,
+    "maxHr": 195,
+    "thresholdPaceSecPerMi": 465
+  },
+  "sets": {
+    "core": "Sessions and intents representative of real use. This is the headline score.",
+    "robustness": "Out-of-distribution or degraded input. Scored separately: a model should fail safely here, but fumbling it says little about everyday quality."
+  },
+  "cases": [
+    {
+      "id": "6x2-vo2max",
+      "set": "core",
+      "fixture": "19036090700",
+      "intent": "vo2max",
+      "tests": "Well-executed interval session. Baseline: does the model read a good session correctly, and exclude the climb home rather than calling it a 7th rep?"
+    },
+    {
+      "id": "6x2-as-base",
+      "set": "core",
+      "mismatch": true,
+      "fixture": "19642518909",
+      "intent": "base",
+      "tests": "Deliberate mismatch. A hard interval session labelled base — the note should say emphatically too hard, not hedge."
+    },
+    {
+      "id": "2x10-threshold",
+      "set": "core",
+      "fixture": "17613929816",
+      "intent": "threshold",
+      "tests": "Both-sided band with long reps. Does it judge threshold correctly rather than treating harder as better?"
+    },
+    {
+      "id": "1x20-threshold",
+      "set": "core",
+      "fixture": "18568372609",
+      "intent": "threshold",
+      "tests": "A single continuous block. Structure edge case — one work rep is not a failed interval session."
+    },
+    {
+      "id": "10x1-vo2max",
+      "set": "core",
+      "fixture": "17950175059",
+      "intent": "vo2max",
+      "tests": "Ten short reps. HR lag is worst here, so the note should lean on the output metrics and hedge the HR read."
+    },
+    {
+      "id": "easy-run-recovery",
+      "set": "core",
+      "fixture": "19574288003",
+      "intent": "recovery",
+      "tests": "Sub-fault excursion: verdict is on-target but ~7min drifted to Z4. The note must carry that nuance without calling the session failed."
+    },
+    {
+      "id": "powered-ride-base",
+      "set": "core",
+      "fixture": "19285811951",
+      "intent": "base",
+      "tests": "Ride with a real power meter but no threshold set. Should surface power without banding it, and recommend setting a threshold."
+    },
+    {
+      "id": "hike-recovery",
+      "set": "core",
+      "fixture": "19287767523",
+      "intent": "recovery",
+      "tests": "95 minutes, no power, notable drift, a different sport. Does the advice stay sensible outside running?"
+    },
+    {
+      "id": "easy-run-as-threshold",
+      "set": "core",
+      "mismatch": true,
+      "fixture": "19574288003",
+      "intent": "threshold",
+      "tests": "Deliberate mismatch the other way: an easy run labelled threshold should read as well short of the stimulus."
+    },
+    {
+      "id": "hiit-no-distance",
+      "set": "robustness",
+      "fixture": "19422777332",
+      "intent": "vo2max",
+      "tests": "No distance stream at all. Highest-severity faithfulness check: the model must not invent a pace. Not representative of real use (this is a lifting-based HIIT session), hence robustness rather than core."
+    }
+  ]
+}

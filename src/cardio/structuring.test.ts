@@ -511,6 +511,24 @@ describe('stream-based interval detection', () => {
     assert.equal(s.structure, undefined);
   });
 
+  it('ignores brief surges that are too small a share of the session', () => {
+    // Found by the eval: an easy run mislabelled "threshold" had its two
+    // hardest minutes picked out as reps. Banding scopes to work reps, so the
+    // verdict then judged 9% of the run and called it on target.
+    const n = 1800;
+    const watts = Array.from({ length: n }, (_, i) => (i > 900 && i < 1000 ? 420 : 250));
+    const s = run(
+      {
+        time: stream(Array.from({ length: n }, (_, i) => i)),
+        watts: stream(watts),
+        heartrate: stream(watts.map((w) => (w > 300 ? 168 : 128))),
+      },
+      'threshold',
+    );
+    assert.equal(s.structure, undefined);
+    assert.equal(s.intentBand?.scope, 'whole-session');
+  });
+
   it('does not invent reps in a genuinely steady effort', () => {
     const n = 1800;
     const s = run(

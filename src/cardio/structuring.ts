@@ -225,6 +225,13 @@ function hasIntervalSpread(outputs: number[]): boolean {
 const MIN_WORK_SEC = 25; // shorter than the shortest rep worth calling a rep
 const MIN_RECOVERY_SEC = 15;
 const MIN_SEPARATION = 1.2; // work centroid must exceed recovery centroid by 20%
+// A session is not an interval session if barely any of it was work. Measured
+// across real sessions, genuine workouts spend 28-63% of moving time working
+// while incidental surges in a steady run account for only 5-17%. Without this
+// floor, an easy run mislabelled "threshold" had its two hardest minutes picked
+// out as reps, and banding — which scopes to work reps — then judged 9% of the
+// session and called it on target.
+const MIN_WORK_FRACTION = 0.2;
 
 /** Centred moving average over a time window — smooths GPS/power jitter without
  *  shifting segment boundaries the way a trailing average would. */
@@ -428,10 +435,17 @@ function detectStructureFromStreams(
     }
   }
 
+  const finalWork = reps.filter((r) => r.kind === 'work');
+  if (finalWork.length === 0) return undefined;
+
+  const movingSec = samples.filter((s) => s.moving).reduce((a, s) => a + s.dt, 0);
+  const workSec = finalWork.reduce((a, r) => a + r.durationSec, 0);
+  if (movingSec > 0 && workSec / movingSec < MIN_WORK_FRACTION) return undefined;
+
   return {
     source: 'stream-detected',
     confidence: 'low',
-    workReps: reps.filter((r) => r.kind === 'work').length,
+    workReps: finalWork.length,
     reps,
     hillFinish,
   };
