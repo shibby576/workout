@@ -54,7 +54,18 @@ CUT THESE
 WHAT TO WRITE
 1. How the session went against the stated intent.
 2. The one thing that most stands out — prefer a specific detail over a summary.
-3. One concrete thing to consider next time.
+3. A prescriptive recommendation. This is required.
+
+THE RECOMMENDATION
+- Always give one. The only exception is a session executed perfectly with nothing
+  to improve in either structure or execution — say so plainly and stop.
+- It must be an ACTION the athlete can take, not an inquiry. "Check whether heat
+  affected you", "see if terrain was a factor" and "monitor your effort" are not
+  recommendations — they hand the problem back.
+- Be specific about what to change and by how much: a pace, a heart-rate ceiling,
+  a rep count, a recovery length, a change to how the session is structured.
+- Prefer the lever that fixes the largest gap the data shows. If execution matched
+  the intent, recommend the next progression instead.
 
 HARD RULES
 - Use ONLY the facts in the brief. Never invent, estimate or recompute a number.

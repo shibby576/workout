@@ -151,6 +151,13 @@ describe('prompt system instructions', () => {
     assert.match(p.system, /Mention a metric only if it changes the verdict or the advice/);
   });
 
+  it('requires a prescriptive recommendation, not an inquiry', () => {
+    const p = promptFor(steady(600, 125), 'base');
+    assert.match(p.system, /A prescriptive recommendation\. This is required\./);
+    assert.match(p.system, /are not\n  recommendations/);
+    assert.match(p.system, /a pace, a heart-rate ceiling/);
+  });
+
   it('forbids inventing or recomputing numbers', () => {
     const p = promptFor(steady(600, 125), 'base');
     assert.match(p.system, /Never invent, estimate or recompute a number/);
