@@ -125,6 +125,11 @@ export interface DriftSummary {
 
 export interface SessionStructure {
   source: 'device-laps' | 'stream-detected';
+  // Device laps are the athlete's own rep markers, so they are exact.
+  // Stream-detected reps are inferred from the output trace and can miscount by
+  // an effort at either end (a finishing kick reads much like a final rep), so
+  // the note should not lean on the exact number.
+  confidence: 'high' | 'low';
   workReps: number; // count of hard efforts detected
   reps?: RepSegment[]; // kept intentionally light for v1
   sustainability?: SustainabilitySummary; // present when there are >= 2 work reps

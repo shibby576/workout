@@ -209,14 +209,194 @@ function looksLikeAutoLaps(laps: StravaLap[]): boolean {
 }
 
 /** True when efforts vary enough to look like intervals rather than a steady
- *  effort with normal noise.
- *
- *  Auto-lapped runs need a much higher bar: a real mile-split run drifts 10-20%
- *  across splits from hills, fatigue or a fast finish, which is not an interval
- *  session. Genuine repeats (e.g. 400s at 4.5m/s off 2.5m/s jogs) clear 25%
- *  comfortably. */
-function hasIntervalSpread(outputs: number[], autoLapped: boolean): boolean {
-  return spreadRatio(outputs) > (autoLapped ? 0.25 : 0.15);
+ *  effort with normal noise. */
+function hasIntervalSpread(outputs: number[]): boolean {
+  return spreadRatio(outputs) > 0.15;
+}
+
+// --- stream-based interval detection ------------------------------------
+//
+// Device laps only describe a session when the athlete actually pressed lap.
+// Auto-lapped sessions (a lap every mile) cannot represent intervals at all: a
+// 6x2min workout arrives as four identical 1609m splits. So intervals are
+// detected from the output stream instead, which is where the reps actually
+// live.
+
+const MIN_WORK_SEC = 25; // shorter than the shortest rep worth calling a rep
+const MIN_RECOVERY_SEC = 15;
+const MIN_SEPARATION = 1.2; // work centroid must exceed recovery centroid by 20%
+
+/** Centred moving average over a time window — smooths GPS/power jitter without
+ *  shifting segment boundaries the way a trailing average would. */
+function smooth(samples: Sample[], values: number[], windowSec: number): number[] {
+  const out = new Array<number>(values.length).fill(0);
+  let lo = 0;
+  let hi = 0;
+  let sum = 0;
+  let count = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const from = samples[i].t - windowSec / 2;
+    const to = samples[i].t + windowSec / 2;
+    while (hi < samples.length && samples[hi].t <= to) {
+      const v = values[hi];
+      if (typeof v === 'number' && !Number.isNaN(v)) {
+        sum += v;
+        count++;
+      }
+      hi++;
+    }
+    while (lo < hi && samples[lo].t < from) {
+      const v = values[lo];
+      if (typeof v === 'number' && !Number.isNaN(v)) {
+        sum -= v;
+        count--;
+      }
+      lo++;
+    }
+    out[i] = count > 0 ? sum / count : 0;
+  }
+  return out;
+}
+
+/** Splits the signal into work/recovery levels by 1-D 2-means. More robust than
+ *  a fixed percentile: it adapts to whatever the two effort levels actually
+ *  were in this session. */
+function twoMeans(values: number[]): { low: number; high: number } {
+  const valid = values.filter((v) => v > 0);
+  if (valid.length === 0) return { low: 0, high: 0 };
+  const sorted = [...valid].sort((a, b) => a - b);
+  let low = sorted[Math.floor(sorted.length * 0.25)];
+  let high = sorted[Math.floor(sorted.length * 0.85)];
+  for (let iter = 0; iter < 12; iter++) {
+    const mid = (low + high) / 2;
+    const lows = valid.filter((v) => v <= mid);
+    const highs = valid.filter((v) => v > mid);
+    if (!lows.length || !highs.length) break;
+    const nl = mean(lows);
+    const nh = mean(highs);
+    if (Math.abs(nl - low) < 0.01 && Math.abs(nh - high) < 0.01) break;
+    low = nl;
+    high = nh;
+  }
+  return { low, high };
+}
+
+interface Segment {
+  startIdx: number;
+  endIdx: number;
+  startSec: number;
+  endSec: number;
+  work: boolean;
+}
+
+/** Threshold crossing with hysteresis, then merges away segments too short to
+ *  be real reps. Hysteresis stops a signal hovering near the threshold from
+ *  producing dozens of phantom reps. */
+function segmentByThreshold(samples: Sample[], smoothed: number[], low: number, high: number): Segment[] {
+  const mid = (low + high) / 2;
+  const margin = (high - low) * 0.1;
+  const enter = mid + margin;
+  const exit = mid - margin;
+
+  const flags: boolean[] = [];
+  let inWork = false;
+  for (let i = 0; i < smoothed.length; i++) {
+    if (!inWork && smoothed[i] >= enter) inWork = true;
+    else if (inWork && smoothed[i] <= exit) inWork = false;
+    flags.push(inWork);
+  }
+
+  // Runs of equal flag become raw segments.
+  const raw: Segment[] = [];
+  let start = 0;
+  for (let i = 1; i <= flags.length; i++) {
+    if (i === flags.length || flags[i] !== flags[start]) {
+      raw.push({
+        startIdx: start,
+        endIdx: i - 1,
+        startSec: samples[start].t,
+        endSec: samples[i - 1].t,
+        work: flags[start],
+      });
+      start = i;
+    }
+  }
+
+  // Absorb segments too short to be a rep or a recovery into their neighbour.
+  const merged: Segment[] = [];
+  for (const seg of raw) {
+    const dur = seg.endSec - seg.startSec;
+    const minDur = seg.work ? MIN_WORK_SEC : MIN_RECOVERY_SEC;
+    const prev = merged[merged.length - 1];
+    if (dur < minDur && prev) {
+      prev.endIdx = seg.endIdx;
+      prev.endSec = seg.endSec;
+    } else if (prev && prev.work === seg.work) {
+      prev.endIdx = seg.endIdx;
+      prev.endSec = seg.endSec;
+    } else {
+      merged.push({ ...seg });
+    }
+  }
+  return merged;
+}
+
+function detectStructureFromStreams(
+  samples: Sample[],
+  wattsData: number[] | undefined,
+  speedData: number[] | undefined,
+  hrData: number[] | undefined,
+): SessionStructure | undefined {
+  const usePower = Boolean(wattsData?.length);
+  const values = usePower ? wattsData! : speedData;
+  if (!values?.length || samples.length < 60) return undefined;
+
+  const smoothed = smooth(samples, values, 15);
+  const { low, high } = twoMeans(smoothed);
+  // A steady run also splits into "faster half" and "slower half"; only a real
+  // separation between the two levels means intervals were actually run.
+  if (low <= 0 || high / low < MIN_SEPARATION) return undefined;
+
+  const segments = segmentByThreshold(samples, smoothed, low, high);
+  const workSegs = segments.filter((s) => s.work && s.endSec - s.startSec >= MIN_WORK_SEC);
+  if (workSegs.length === 0 || workSegs.length > 40) return undefined;
+
+  // Warm-up surges and finishing kicks cross the threshold too. Efforts far
+  // shorter than the session's main reps are not reps — this is what separates
+  // the two 10-minute blocks of a "2x10" from the 40-second surge before them.
+  const longestWorkSec = Math.max(...workSegs.map((s) => s.endSec - s.startSec));
+  const minRepSec = Math.max(MIN_WORK_SEC, longestWorkSec * 0.5);
+
+  const reps: RepSegment[] = segments
+    .filter((s) => {
+      const dur = s.endSec - s.startSec;
+      return s.work ? dur >= minRepSec : dur >= MIN_RECOVERY_SEC;
+    })
+    .map((s, i) => {
+      const within = (arr: number[] | undefined) =>
+        (arr ?? []).slice(s.startIdx, s.endIdx + 1).filter((v) => typeof v === 'number' && v > 0);
+      const speeds = within(speedData);
+      const watts = within(wattsData);
+      const hrs = within(hrData);
+      const avgSpeed = speeds.length ? mean(speeds) : 0;
+      return {
+        index: i + 1,
+        startSec: s.startSec,
+        endSec: s.endSec,
+        durationSec: Math.round(s.endSec - s.startSec),
+        avgHr: hrs.length ? Math.round(mean(hrs)) : undefined,
+        avgWatts: watts.length ? Math.round(mean(watts)) : undefined,
+        paceSecPerMi: avgSpeed > 0 ? METERS_PER_MILE / avgSpeed : undefined,
+        kind: s.work ? ('work' as const) : ('recovery' as const),
+      };
+    });
+
+  return {
+    source: 'stream-detected',
+    confidence: 'low',
+    workReps: reps.filter((r) => r.kind === 'work').length,
+    reps,
+  };
 }
 
 function detectStructureFromLaps(
@@ -224,8 +404,14 @@ function detectStructureFromLaps(
   usePower: boolean,
 ): SessionStructure | undefined {
   if (laps.length < 3) return undefined;
+  // Auto-lapped sessions are never usable for structure, whatever their spread:
+  // a lap every mile cannot describe a 6x2min workout, and pretending otherwise
+  // produced verdicts like "2 work reps" for a six-rep session. Those go to
+  // stream detection instead.
+  if (looksLikeAutoLaps(laps)) return undefined;
+
   const outputs = laps.map((l) => (usePower ? (l.average_watts ?? 0) : l.average_speed));
-  if (outputs.some((o) => !o) || !hasIntervalSpread(outputs, looksLikeAutoLaps(laps))) return undefined;
+  if (outputs.some((o) => !o) || !hasIntervalSpread(outputs)) return undefined;
 
   const isWork = classifyEfforts(outputs);
   // Stream timestamps are elapsed seconds from the start, so rep windows are
@@ -246,7 +432,12 @@ function detectStructureFromLaps(
     };
   });
 
-  return { source: 'device-laps', workReps: reps.filter((r) => r.kind === 'work').length, reps };
+  return {
+    source: 'device-laps',
+    confidence: 'high',
+    workReps: reps.filter((r) => r.kind === 'work').length,
+    reps,
+  };
 }
 
 /** Marks which reps reached the intent's target intensity. Judged on power AND
@@ -484,7 +675,18 @@ export function structureSession(input: StructuringInput): SessionSummary {
     : computeDrift(samples, hrData, speedData, 'pace:hr-halves');
 
   // --- structure / intervals ---
+  // Device laps first when the athlete actually pressed lap (they mark the reps
+  // exactly); otherwise fall back to finding the efforts in the output stream.
   let structure = detail.laps ? detectStructureFromLaps(detail.laps, Boolean(wattsData?.length)) : undefined;
+  // Stream detection only runs when the intent implies reps. Amplitude alone
+  // cannot separate a hard rep from a hill or a coast — measured across real
+  // sessions, a hike separated its two halves more strongly (2.9x) than any
+  // genuine interval workout did (1.3-1.6x). Gating on intent sidesteps that
+  // entirely: we are judging the session against what it was meant to be, so
+  // looking for reps is only meaningful when reps were the plan.
+  if (!structure && INTENT_BANDS[intent].emphasizeSustainability) {
+    structure = detectStructureFromStreams(samples, wattsData, speedData, hrData);
+  }
   if (structure) {
     judgeReps(structure, intent, hrZones, powerZones);
     structure = { ...structure, sustainability: computeSustainability(structure) };
@@ -678,7 +880,11 @@ function deriveSignals(s: SessionSummary, intent: IntentType): Signal[] {
   if (s.structure) {
     signals.push({
       code: 'interval_session',
-      detail: { workReps: s.structure.workReps, source: s.structure.source },
+      detail: {
+        workReps: s.structure.workReps,
+        source: s.structure.source,
+        confidence: s.structure.confidence,
+      },
     });
     const sus = s.structure.sustainability;
     if (sus) {

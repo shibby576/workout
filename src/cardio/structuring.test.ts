@@ -387,13 +387,16 @@ describe('auto-lap rejection (values from real captured runs)', () => {
     assert.equal(s.structure, undefined);
   });
 
-  it('still detects real repeats even on uniform lap distances', () => {
-    // 400m repeats off 400m jogs: same distance, but a huge output gap.
+  // Uniform lap distances are now always treated as auto-laps, whatever the
+  // output spread — every captured interval session in this athlete's history
+  // arrived as identical mile splits, and a mile split cannot describe a 6x2min
+  // workout. Sessions like that are found by stream detection instead.
+  it('rejects uniform-distance laps even when the output gap is large', () => {
     const laps = [0, 1, 2, 3, 4, 5].map((i) =>
       autoLap(400, i % 2 === 0 ? 450 : 240, i % 2 === 0 ? 4.5 : 2.4, i),
     );
     const s = run(steady(600, 175), 'vo2max', { laps });
-    assert.equal(s.structure?.workReps, 3);
+    assert.notEqual(s.structure?.source, 'device-laps');
   });
 
   it('still detects intervals when lap distances differ', () => {
@@ -405,6 +408,80 @@ describe('auto-lap rejection (values from real captured runs)', () => {
     ];
     const s = run(steady(600, 175), 'vo2max', { laps });
     assert.equal(s.structure?.workReps, 2);
+  });
+});
+
+describe('stream-based interval detection', () => {
+  /** n samples at 1Hz alternating workSec at `hi` and restSec at `lo`. */
+  function intervals(workSec: number, restSec: number, reps: number, hi: number, lo: number) {
+    const warm = 300;
+    const time: number[] = [];
+    const watts: number[] = [];
+    const hr: number[] = [];
+    let t = 0;
+    for (let i = 0; i < warm; i++, t++) {
+      time.push(t);
+      watts.push(lo);
+      hr.push(120);
+    }
+    for (let r = 0; r < reps; r++) {
+      for (let i = 0; i < workSec; i++, t++) {
+        time.push(t);
+        watts.push(hi);
+        hr.push(175);
+      }
+      for (let i = 0; i < restSec; i++, t++) {
+        time.push(t);
+        watts.push(lo);
+        hr.push(130);
+      }
+    }
+    return {
+      time: stream(time),
+      watts: stream(watts),
+      heartrate: stream(hr),
+      velocity_smooth: stream(watts.map((w) => w / 100)),
+    };
+  }
+
+  it('finds reps in the stream when laps are useless', () => {
+    const s = run(intervals(120, 90, 6, 450, 220), 'vo2max');
+    assert.equal(s.structure?.source, 'stream-detected');
+    assert.equal(s.structure?.workReps, 6);
+  });
+
+  it('marks stream-detected structure as low confidence', () => {
+    const s = run(intervals(120, 90, 6, 450, 220), 'vo2max');
+    // The count is inferred, so the note must not quote it as exact.
+    assert.equal(s.structure?.confidence, 'low');
+    assert.ok(s.signals.some((x) => x.code === 'interval_session' && x.detail?.confidence === 'low'));
+  });
+
+  it('recovers rep durations, not just the count', () => {
+    const s = run(intervals(120, 90, 5, 450, 220), 'vo2max');
+    const work = (s.structure?.reps ?? []).filter((r) => r.kind === 'work');
+    work.forEach((r) => assert.ok(Math.abs(r.durationSec - 120) < 25, `rep ${r.index} was ${r.durationSec}s`));
+  });
+
+  it('does not hunt for reps when the intent is not an interval session', () => {
+    // Amplitude alone cannot tell a rep from a hill, so detection is gated on
+    // intent. A base run is judged on its zone distribution, not phantom reps.
+    const s = run(intervals(120, 90, 6, 450, 220), 'base');
+    assert.equal(s.structure, undefined);
+  });
+
+  it('does not invent reps in a genuinely steady effort', () => {
+    const n = 1800;
+    const s = run(
+      {
+        time: stream(Array.from({ length: n }, (_, i) => i)),
+        watts: stream(Array.from({ length: n }, () => 300)),
+        heartrate: stream(Array.from({ length: n }, () => 150)),
+      },
+      'vo2max',
+    );
+    assert.equal(s.structure, undefined);
+    assert.ok(s.signals.some((x) => x.code === 'expected_intervals_but_steady'));
   });
 });
 

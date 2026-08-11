@@ -112,11 +112,13 @@ describe('prompt faithfulness', () => {
   });
 
   it('says when banding covered only the work reps', () => {
+    // Distances must differ, or these read as auto-laps and are rejected —
+    // this is what real device laps look like when the athlete presses lap.
     const laps = [0, 1, 2, 3, 4, 5].map((i) => ({
       lap_index: i + 1,
       moving_time: 100,
       elapsed_time: 100,
-      distance: 400,
+      distance: i % 2 === 0 ? 800 : 300,
       average_speed: i % 2 === 0 ? 4.5 : 2.4,
       average_heartrate: i % 2 === 0 ? 178 : 130,
     }));

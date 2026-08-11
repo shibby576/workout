@@ -86,7 +86,9 @@ function fmtSignal(s: Signal): string {
     case 'dominant_zone':
       return `Most time was spent in zone ${d.zone} (${d.pct}%).`;
     case 'interval_session':
-      return `Detected as an interval session: ${d.workReps} work reps.`;
+      return d.confidence === 'low'
+        ? `Reads as an interval session, roughly ${d.workReps} work efforts — inferred from the pace/power trace rather than marked laps, so treat the count as approximate and do not quote it as exact.`
+        : `Detected as an interval session: ${d.workReps} work reps (from the athlete's own lap markers).`;
     case 'rep_fade':
       return `Work reps faded ${d.fadePct}% from first to last (measured by ${d.basis}) — usually a sign the opening reps were too hard to repeat.`;
     case 'rep_build':

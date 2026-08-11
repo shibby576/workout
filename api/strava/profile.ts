@@ -28,7 +28,10 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   // far better anchor than 220-age (which carries a ~10-12bpm standard
   // deviation — routinely a full zone out). Used to seed the setup field,
   // which stays editable.
-  const observedMaxHr = await fetchActivities(tokens.accessToken, 100)
+  // 200 rather than 100: this athlete's hardest efforts (195, 192 bpm) sat
+  // outside the most recent 100 activities, so a shorter window under-reported
+  // max HR by ~9bpm — enough to shift every zone boundary.
+  const observedMaxHr = await fetchActivities(tokens.accessToken, 200)
     .then((activities) => {
       const maxima = (activities as { max_heartrate?: number }[])
         .map((a) => a.max_heartrate)
