@@ -89,6 +89,8 @@ function fmtSignal(s: Signal): string {
       return d.confidence === 'low'
         ? `Reads as an interval session, roughly ${d.workReps} work efforts — inferred from the pace/power trace rather than marked laps, so treat the count as approximate and do not quote it as exact.`
         : `Detected as an interval session: ${d.workReps} work reps (from the athlete's own lap markers).`;
+    case 'hill_finish':
+      return `The session ends with a ${d.durationSec}s climb at ${d.gradePct}% grade (+${d.climbMeters}m). This is the route home, not a rep — it is excluded from the rep count. Do not call it an extra interval.`;
     case 'rep_fade':
       return `Work reps faded ${d.fadePct}% from first to last (measured by ${d.basis}) — usually a sign the opening reps were too hard to repeat.`;
     case 'rep_build':

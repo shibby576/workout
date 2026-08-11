@@ -463,6 +463,47 @@ describe('stream-based interval detection', () => {
     work.forEach((r) => assert.ok(Math.abs(r.durationSec - 120) < 25, `rep ${r.index} was ${r.durationSec}s`));
   });
 
+  /** Appends a steep climb — the run home — after the last rep. */
+  function withHillFinish(base: StravaStreamSet, hi: number, climbSec: number) {
+    const time = [...(base.time!.data)];
+    const watts = [...(base.watts!.data)];
+    const hr = [...(base.heartrate!.data)];
+    const grade = watts.map(() => 0.3); // reps are essentially flat
+    let t = time[time.length - 1];
+    for (let i = 0; i < climbSec; i++) {
+      time.push(++t);
+      watts.push(hi);
+      hr.push(170);
+      grade.push(8.5);
+    }
+    return {
+      time: stream(time),
+      watts: stream(watts),
+      heartrate: stream(hr),
+      grade_smooth: stream(grade),
+      velocity_smooth: stream(watts.map((w) => w / 100)),
+    };
+  }
+
+  it('excludes a steep climb home from the rep count', () => {
+    // Measured on real sessions: reps ran at -0.6% to 3.2% grade, the climb
+    // home at 6.7-9.7%. Without this the count was consistently one too high.
+    const s = run(withHillFinish(intervals(120, 90, 6, 450, 220), 450, 90), 'vo2max');
+    assert.equal(s.structure?.workReps, 6);
+    assert.ok(s.structure?.hillFinish);
+    assert.ok(s.structure!.hillFinish!.gradePct >= 5);
+    assert.ok(s.signals.some((x) => x.code === 'hill_finish'));
+  });
+
+  it('keeps every rep when the whole session is hill repeats', () => {
+    // All reps steep, so none of them is terrain — the exclusion must not fire.
+    const base = intervals(120, 90, 5, 450, 220);
+    const steep = { ...base, grade_smooth: stream(base.watts.data.map(() => 8)) };
+    const s = run(steep, 'vo2max');
+    assert.equal(s.structure?.workReps, 5);
+    assert.equal(s.structure?.hillFinish, undefined);
+  });
+
   it('does not hunt for reps when the intent is not an interval session', () => {
     // Amplitude alone cannot tell a rep from a hill, so detection is gated on
     // intent. A base run is judged on its zone distribution, not phantom reps.

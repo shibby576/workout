@@ -133,6 +133,10 @@ export interface SessionStructure {
   workReps: number; // count of hard efforts detected
   reps?: RepSegment[]; // kept intentionally light for v1
   sustainability?: SustainabilitySummary; // present when there are >= 2 work reps
+  // A hard effort at the very end of the session that was terrain rather than a
+  // rep — typically a climb home. Excluded from workReps so the count matches
+  // the session that was actually run, but reported so the number is explainable.
+  hillFinish?: { gradePct: number; climbMeters: number; durationSec: number };
 }
 
 export interface RepSegment {
@@ -143,6 +147,8 @@ export interface RepSegment {
   avgHr?: number;
   avgWatts?: number;
   paceSecPerMi?: number;
+  avgGradePct?: number;
+  climbMeters?: number;
   kind: 'work' | 'recovery';
   // Did this rep reach the intent's target intensity? Judged on power/pace AND
   // HR together: output confirms the effort, HR confirms the physiological
