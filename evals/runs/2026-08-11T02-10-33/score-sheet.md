@@ -17,9 +17,9 @@ regardless of the rest. Check every number in a note against the brief in
 
 | faithfulness | domain | prescriptive | calibration | concision | result |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  |  |  |  |
+|  2  |  2  |  2  | 2 | 1 | | - |
 
-Notes: 
+Notes: I hav3 no way of validating the 7.2% powr drop and the 14.7% decoupling is a onfusing metric. not even sure what it means. Maybe overall a bit wordy. the main thing to get across here is that i maybe start3ed too hot (give me specific pace examples as did) which caused a drop. Be mroe forward in saying you did this, it resultied in this , next time improve it by usign this pace and tryign to keep it mroe conssitent. 
 
 ## 6x2-as-base  *(core, deliberate mismatch)*
 
@@ -31,9 +31,9 @@ Notes:
 
 | faithfulness | domain | prescriptive | calibration | concision | result |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  |  |  |  |
+| 2 | 2 | 2 | 2 | 1 | - |
 
-Notes: 
+Notes: overall good but maybe on that last line lets more prescriptive, if hitting z4 at that pace,then back down the pace to something slower (and suggest the pace you think might achieve that pace or claose to it).
 
 ## 2x10-threshold  *(core)*
 
@@ -45,9 +45,9 @@ Notes:
 
 | faithfulness | domain | prescriptive | calibration | concision | result |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  |  |  |  |
+| 2 | 2 | 2 | 1 | 2 | - |
 
-Notes: 
+Notes: we dont need to say things like ", not noise." thats filler. If HR was correct then does the pace matter as much?  i thikn the first two lines work, but might want to incldue why we think the pace was mis matched "based on your max PACE of xx, youy expected threshold pace is yy vs what you ran youyr intervals at" need to be more clear on if we thought the hr distribution was right or if we thing there is still room to improve there by dialing in the pace (ie if we did go 35sec faster, would hr stikl have been in threshold territory or would it have been in vo2max?). i like the end telling the user tpo set more clear details if neded and providing clear pace guidance.
 
 ## 1x20-threshold  *(core)*
 
@@ -59,9 +59,9 @@ Notes:
 
 | faithfulness | domain | prescriptive | calibration | concision | result |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  |  |  |  |
+| 2 | 2 | 2 | 2 | 2 |  |
 
-Notes: 
+Notes: great note. decopuling may need to be defined better but overall strogn note.
 
 ## 10x1-vo2max  *(core)*
 
@@ -73,9 +73,9 @@ Notes:
 
 | faithfulness | domain | prescriptive | calibration | concision | result |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  |  |  |  |
+| 2 | 2 | 2 | 2 | 1 | - |
 
-Notes: 
+Notes: is it pssible that the rest pace was too slow here too? based on strva daa spent aroun 80% on z2/z3 with 12% in z4 and 1% in z5 (>177). i like the adv ice to spot pushing pace bekiw target but we dont need the last line "no buying intesitnty" . i think we can jsut repgaerse the end ehre to say someting like "do as suggested wth the structure but keep at the target pace (not below)
 
 ## easy-run-recovery  *(core)*
 
@@ -87,9 +87,9 @@ Notes:
 
 | faithfulness | domain | prescriptive | calibration | concision | result |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  |  |  |  |
+| 2 |2  | 2 | 2 | 2 | - |
 
-Notes: 
+Notes: Good note
 
 ## powered-ride-base  *(core)*
 
@@ -101,9 +101,9 @@ Notes:
 
 | faithfulness | domain | prescriptive | calibration | concision | result |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  |  |  |  |
+| 2 | 1 | 1 | 2 | 2 | - |
 
-Notes: 
+Notes: Take a look at the power spikes here, thi swas inteded to be a vo2 workout but actually failed to do so. Also i think its interesting to point out the decoupling and explining it but sine this was inside, it weas most likely due to fatigue or general fitness. is this the most useful thing to call out? not sure hown this not would change if it were labled as interval.
 
 ## hike-recovery  *(core)*
 
@@ -115,9 +115,9 @@ Notes:
 
 | faithfulness | domain | prescriptive | calibration | concision | result |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  |  |  |  |
+| 2 | 1 | 2 | 2 | 1 | - |
 
-Notes: 
+Notes: lots of extra words in this note. we dont need to explin ourselves with things like " so the pace is meaningless against run becnch mrk" 
 
 ## easy-run-as-threshold  *(core, deliberate mismatch)*
 
@@ -129,9 +129,9 @@ Notes:
 
 | faithfulness | domain | prescriptive | calibration | concision | result |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  |  |  |  |
+| 2 | 2 | 2 | 2 | 2 | - |
 
-Notes: 
+Notes: great example of mismatch
 
 ## hiit-no-distance  *(robustness)*
 
@@ -143,7 +143,7 @@ Notes:
 
 | faithfulness | domain | prescriptive | calibration | concision | result |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  |  |  |  |
+| 2 | 1 | 1 | 2 | 2 | - |
 
-Notes: 
+Notes: I think this works. so far we;ve only really ben considering cardio workouts for this eval but i guess hiit workouts could fall into this camp too, thoiught the structuring guidance would likely be different? maybe we can just see based on tstrava data that this isnt a run bike etc and not allow evaluation. or we cna keep it as it but should ensure the giuvane is -on how to make a hiit workout hit the hr goal. 
 
