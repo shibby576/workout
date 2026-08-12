@@ -68,7 +68,15 @@ export function openRouterProvider(apiKey: string): GenerationProvider {
             { role: 'system', content: req.system },
             { role: 'user', content: req.user },
           ],
-          max_tokens: req.maxTokens ?? 400,
+          // Generous ceiling because reasoning models bill their thinking against
+          // this budget: GLM was observed spending 2000+ tokens reasoning and
+          // emitting an empty note. The note length is controlled by the prompt,
+          // not by this cap, so raising it costs nothing on non-reasoning models.
+          max_tokens: req.maxTokens ?? 4000,
+          // Narrating supplied facts in under 60 words does not need extended
+          // chain-of-thought, and the athlete would be paying for it. Models
+          // without a reasoning mode ignore this.
+          reasoning: { effort: 'low' },
           // Some variance is wanted: "Regenerate" should produce a genuinely
           // different phrasing, and the eval step needs to see run-to-run
           // spread rather than one lucky sample.
