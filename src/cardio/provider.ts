@@ -26,9 +26,15 @@ export interface GenerationProvider {
   generate(req: GenerationRequest): Promise<GenerationResult>;
 }
 
-// The quality baseline. The spec's sequence is deliberate: get one strong model
-// working end to end, then compare open-source candidates against it.
-export const DEFAULT_MODEL = 'anthropic/claude-sonnet-5';
+// Chosen by the round-2 eval across six models. DeepSeek v3.2 was the most
+// consistent performer at ~10x lower cost than the Claude Sonnet baseline, with
+// comparable latency and no failed generations. Sonnet produced the single best
+// coaching insight but was the wordiest and 10x the price; the cheapest options
+// (glm-4.7-flash, qwen3-235b) shipped advice that was actively wrong.
+//
+// Word count deliberately did not drive this: length is a prompt knob, whereas
+// latency, error rate and cost are properties of the model.
+export const DEFAULT_MODEL = 'deepseek/deepseek-v3.2';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
