@@ -15,7 +15,7 @@
 
 import { INTENT_LABELS, duration, pace, shortDuration } from './format.ts';
 import type { HrZone, SessionSummary, Signal } from './sessionSummary.ts';
-import { ZONES } from './zones.ts';
+import { ZONES, isRide } from './zones.ts';
 
 export interface CoachPrompt {
   system: string;
@@ -46,15 +46,36 @@ BE SELECTIVE
 CUT THESE
 - Hedging and filler: "worth flagging", "the kind of thing that", "it's important to note",
   "that said", "overall", "generally speaking", "keep in mind".
+- Trailing qualifiers that add nothing: "not noise", "not just the average",
+  "which is meaningful", "and that matters".
+- Explaining your own reasoning process or the limits of the data beyond a single
+  hedge. State the read; do not justify why you can state it.
 - Throat-clearing openers: "This held together as", "This came in", "Looking at the data".
   Start with the finding itself.
 - Restating a number you have already given, or explaining what a metric means.
 - Multi-clause sentences chained with dashes and "and ... which ... so".
 
-WHAT TO WRITE
-1. How the session went against the stated intent.
-2. The one thing that most stands out — prefer a specific detail over a summary.
-3. A prescriptive recommendation. This is required.
+WHAT TO WRITE — follow this shape
+1. What you did: how the session went against the stated intent.
+2. What it caused: the consequence visible in the data, stated as a link, not two
+   separate facts. "You opened at 6:45, and output dropped 7% by the last rep"
+   beats listing both.
+3. What to change: a prescriptive recommendation. This is required.
+
+EXPLAIN, DON'T JUST CITE
+- A number the athlete cannot interpret is worse than no number. If you mention
+  aerobic decoupling, say what it means in plain words — heart rate drifting
+  upward at the same effort — and what it implies here. Never quote it bare.
+- Same for any metric that is not on the card in front of them: give it meaning
+  in the same sentence, or leave it out.
+- When you say a pace was off target, name the anchor it came from: "against
+  your 7:45 threshold pace, this session's range was X to Y".
+
+SPORT
+- The session type is stated in the brief. Do not apply running logic to a ride,
+  a hike, or a gym-based session. Pace targets, cadence and stride advice are
+  meaningless off a run.
+- On an indoor session, do not attribute drift to heat, terrain or weather.
 
 THE RECOMMENDATION
 - Always give one. The only exception is a session executed perfectly with nothing
@@ -66,6 +87,9 @@ THE RECOMMENDATION
   a rep count, a recovery length, a change to how the session is structured.
 - Prefer the lever that fixes the largest gap the data shows. If execution matched
   the intent, recommend the next progression instead.
+- Recovery periods between reps are part of the session. If the recoveries were
+  far slower or longer than the work they support, that is worth a recommendation
+  of its own.
 
 HARD RULES
 - Use ONLY the facts in the brief. Never invent, estimate or recompute a number.
@@ -149,10 +173,21 @@ export function buildCoachPrompt(s: SessionSummary): CoachPrompt {
   L.push(`INTENDED SESSION TYPE: ${intentLabel.toUpperCase()}`);
   L.push('');
   L.push('SESSION');
-  L.push(`- Activity: ${s.activity.sportType}`);
+  const indoor = /virtual|trainer|indoor|weight|hiit|highintensity|workout/i.test(s.activity.sportType);
+  L.push(`- Activity: ${s.activity.sportType}${indoor ? ' (INDOOR/GYM — do not attribute anything to heat, terrain or weather)' : ''}`);
+  if (!/run/i.test(s.activity.sportType)) {
+    L.push(`- NOTE: this is not a run. Do not give pace-per-mile, cadence or stride advice as if it were.`);
+  }
   L.push(`- Moving time: ${duration(s.duration.movingSec)}`);
   if (s.distance) L.push(`- Distance: ${s.distance.miles} mi`);
-  if (s.pace) L.push(`- Average pace: ${pace(s.pace.avgPaceSecPerMi)} per mile`);
+  if (s.pace) {
+    // Minutes-per-mile is the wrong unit on a bike; riders think in speed.
+    L.push(
+      isRide(s.activity.sportType)
+        ? `- Average speed: ${(s.pace.avgSpeedMps * 2.23694).toFixed(1)} mph`
+        : `- Average pace: ${pace(s.pace.avgPaceSecPerMi)} per mile`,
+    );
+  }
   if (s.heartRate) L.push(`- Heart rate: ${s.heartRate.avg} avg, ${s.heartRate.max} max`);
   if (s.power) {
     L.push(
@@ -182,6 +217,8 @@ export function buildCoachPrompt(s: SessionSummary): CoachPrompt {
     L.push('PACE VS TARGET');
     L.push(`- Ran: ${pace(p.actualSecPerMi)} per mile${p.basis === 'work-reps' ? ' across the work reps' : ''}`);
     L.push(`- Target for this session type: ${pace(p.targetFastSecPerMi)}–${pace(p.targetSlowSecPerMi)} per mile`);
+    // Named so the note can show its working rather than asserting a range.
+    L.push(`- That range is derived from the athlete's threshold pace of ${pace(p.thresholdPaceSecPerMi)} per mile`);
     L.push(`- Verdict: ${p.verdict}`);
   }
 
@@ -193,6 +230,21 @@ export function buildCoachPrompt(s: SessionSummary): CoachPrompt {
       const su = s.structure.sustainability;
       L.push(`- Reps reaching target intensity: ${su.repsHittingTarget} of ${su.totalWorkReps}`);
       L.push(`- Output change first rep to last: ${su.fadePct > 0 ? `-${su.fadePct}% (faded)` : `+${Math.abs(su.fadePct)}% (held or built)`}`);
+    }
+    // Recoveries are part of the session design, so they are shown and can be
+    // commented on — recoveries far longer or slower than the work they support
+    // are their own coaching point.
+    const work = (s.structure.reps ?? []).filter((r) => r.kind === 'work');
+    const rest = (s.structure.reps ?? []).filter((r) => r.kind === 'recovery');
+    if (work.length) {
+      L.push(`- Work rep durations: ${work.map((r) => `${r.durationSec}s`).join(', ')}`);
+    }
+    if (rest.length) {
+      L.push(`- Recovery durations: ${rest.map((r) => `${r.durationSec}s`).join(', ')}`);
+      const restPaces = rest.map((r) => r.paceSecPerMi).filter((p): p is number => typeof p === 'number');
+      if (restPaces.length) {
+        L.push(`- Recovery pace: ${pace(Math.round(restPaces.reduce((a, b) => a + b, 0) / restPaces.length))} per mile average`);
+      }
     }
   } else {
     L.push('');

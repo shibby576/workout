@@ -153,9 +153,33 @@ describe('prompt system instructions', () => {
 
   it('requires a prescriptive recommendation, not an inquiry', () => {
     const p = promptFor(steady(600, 125), 'base');
-    assert.match(p.system, /A prescriptive recommendation\. This is required\./);
-    assert.match(p.system, /are not\n  recommendations/);
+    assert.match(p.system, /a prescriptive recommendation\. This is required\./);
+    assert.match(p.system, /hand the problem back/);
     assert.match(p.system, /a pace, a heart-rate ceiling/);
+  });
+
+  it('does not apply running logic to other sports', () => {
+    const p = promptFor(steady(600, 130), 'base', { sport_type: 'Ride', type: 'Ride' });
+    // Threshold pace is a running number; a ride should get no pace target at
+    // all rather than one the note has to explain away.
+    assert.doesNotMatch(p.user, /PACE VS TARGET/);
+    assert.match(p.user, /this is not a run/);
+    assert.match(p.user, /Average speed: .* mph/);
+  });
+
+  it('tells the model not to blame weather on an indoor session', () => {
+    const p = promptFor(steady(600, 150), 'vo2max', {
+      sport_type: 'HighIntensityIntervalTraining',
+      type: 'Workout',
+    });
+    assert.match(p.user, /INDOOR\/GYM/);
+    assert.match(p.user, /heat, terrain or weather/);
+  });
+
+  it('requires unfamiliar metrics to be explained rather than quoted', () => {
+    const p = promptFor(steady(600, 125), 'base');
+    assert.match(p.system, /aerobic decoupling, say what it means in plain words/);
+    assert.match(p.system, /Never quote it bare/);
   });
 
   it('forbids inventing or recomputing numbers', () => {

@@ -31,6 +31,7 @@ import type {
 import type { RawSession, StravaLap, StravaSplit, StravaStreamSet } from './stravaTypes';
 import {
   ZONES,
+  isRunning,
   resolveHrZones,
   resolvePowerZones,
   thresholdPowerFor,
@@ -550,7 +551,12 @@ function computePaceTarget(
   thresholdPaceSecPerMi: number | null,
   pace: PaceSummary | undefined,
   structure: SessionStructure | undefined,
+  sportType: string,
 ): PaceTargetResult | undefined {
+  // Threshold pace is a running number. Applying it to a ride or a hike produces
+  // a target the athlete has to be told to ignore, which is worse than not
+  // showing one — and pace-per-mile is the wrong unit on a bike anyway.
+  if (!isRunning(sportType)) return undefined;
   if (!thresholdPaceSecPerMi || thresholdPaceSecPerMi <= 0 || !pace || pace.avgPaceSecPerMi <= 0) return undefined;
 
   // For intervals, judge the work reps — recoveries would drag the average
@@ -800,7 +806,7 @@ export function structureSession(input: StructuringInput): SessionSummary {
     drift,
     structure,
     intentBand,
-    paceTarget: computePaceTarget(intent, athlete.thresholdPaceSecPerMi, pace, structure),
+    paceTarget: computePaceTarget(intent, athlete.thresholdPaceSecPerMi, pace, structure, sportType),
     signals: [],
   };
 

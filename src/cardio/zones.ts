@@ -23,6 +23,14 @@ export interface AthleteProfile {
   thresholdPaceSecPerMi: number | null;
 }
 
+export function isRunning(sportType: string): boolean {
+  return /run/i.test(sportType);
+}
+
+export function isRide(sportType: string): boolean {
+  return /ride|cycl/i.test(sportType);
+}
+
 /** Threshold power for the sport at hand, or null when we don't have one.
  *  Strava's `ftp` field is cycling-only. */
 export function thresholdPowerFor(sportType: string, profile: AthleteProfile): number | null {
