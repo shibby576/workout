@@ -108,6 +108,14 @@ const lines = [
 for (const [caseId, rows] of byCase) {
   const c = spec.cases.find((x) => x.id === caseId);
   lines.push(`## ${caseId}  *(${c.set}${c.mismatch ? ', deliberate mismatch' : ''})*`, '');
+  // A note can't be judged without knowing what the session actually was.
+  const first = rows.find((r) => !r.error);
+  lines.push(
+    `**"${first?.activity ?? '?'}"** labelled as **${c.intent}**${c.mismatch ? ' *(deliberately wrong — the note should say so)*' : ''} · <https://www.strava.com/activities/${c.fixture}>`,
+    '',
+    `See \`sessions.md\` for the full computed picture of this session.`,
+    '',
+  );
   lines.push(`**Tests:** ${c.tests}`, '');
   for (const r of rows) {
     if (r.error) {
