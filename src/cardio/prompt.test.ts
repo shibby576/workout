@@ -188,3 +188,22 @@ describe('prompt system instructions', () => {
     assert.match(p.system, /Use ONLY the facts in the brief/);
   });
 });
+
+describe('non-cardio sessions', () => {
+  it('instructs the model to decline rather than coach', () => {
+    const p = promptFor(steady(600, 140), 'vo2max', {
+      sport_type: 'WeightTraining',
+      type: 'WeightTraining',
+    });
+    assert.match(p.user, /NOT A CARDIO SESSION/);
+    assert.match(p.user, /Do not write a coaching note/);
+    assert.match(p.system, /reviews cardio only/);
+  });
+
+  it('still treats recognised cardio sports normally', () => {
+    for (const sport of ['Run', 'Ride', 'Swim', 'Hike', 'Rowing', 'Elliptical']) {
+      const p = promptFor(steady(600, 140), 'base', { sport_type: sport, type: sport });
+      assert.doesNotMatch(p.user, /NOT A CARDIO SESSION/, `${sport} should be supported`);
+    }
+  });
+});

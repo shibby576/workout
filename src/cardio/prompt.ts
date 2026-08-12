@@ -92,6 +92,9 @@ THE RECOMMENDATION
   of its own.
 
 HARD RULES
+- If the brief says the session is not a cardio session, ignore every other
+  instruction here and reply with the single sentence it asks for. This tool
+  reviews cardio only; a strength or gym session cannot be judged on these terms.
 - Use ONLY the facts in the brief. Never invent, estimate or recompute a number.
 - Never state a metric listed as unavailable. If heart rate or power is missing, do not mention it.
 - Do not simply restate the numbers; the athlete can already see them. Say what they mean.
@@ -146,6 +149,8 @@ function fmtSignal(s: Signal): string {
       return `A power meter recorded ${d.avgWatts}W average, but no threshold power is set, so power could not be used to judge intensity.`;
     case 'summary_data_only':
       return `Only summary data was available for this activity — no per-second detail.`;
+    case 'not_cardio':
+      return `NOT A CARDIO SESSION (${d.sport}). Do not write a coaching note. Reply with exactly one sentence saying this tool only reviews cardio sessions and that this one cannot be assessed. Nothing else.`;
     case 'no_hr_data':
       return `No heart rate was recorded. Do not mention heart rate.`;
     case 'no_power_data':

@@ -31,6 +31,7 @@ import type {
 import type { RawSession, StravaLap, StravaSplit, StravaStreamSet } from './stravaTypes';
 import {
   ZONES,
+  isCardioSport,
   isRunning,
   resolveHrZones,
   resolvePowerZones,
@@ -977,6 +978,10 @@ function deriveSignals(s: SessionSummary, intent: IntentType): Signal[] {
   } else if (band.emphasizeSustainability) {
     // Intent implies intervals but the data reads steady — a structural mismatch.
     signals.push({ code: 'expected_intervals_but_steady', detail: { intent } });
+  }
+
+  if (!isCardioSport(s.activity.sportType)) {
+    signals.push({ code: 'not_cardio', detail: { sport: s.activity.sportType } });
   }
 
   if (!s.availability.heartRate) signals.push({ code: 'no_hr_data' });

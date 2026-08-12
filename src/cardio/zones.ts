@@ -23,6 +23,26 @@ export interface AthleteProfile {
   thresholdPaceSecPerMi: number | null;
 }
 
+// The app is cardio-only. Strength and gym-based sessions have no pace, no
+// distance and different coaching logic entirely, so they are declined rather
+// than given a note built from running assumptions. The activity picker already
+// filters these out; this guard covers fixtures and direct API calls.
+const CARDIO_SPORTS = [
+  /run/i,
+  /ride|cycl/i,
+  /swim/i,
+  /walk/i,
+  /hike/i,
+  /row/i,
+  /elliptical/i,
+  /stairstepper/i,
+  /nordic|skat|ski|snowshoe/i,
+];
+
+export function isCardioSport(sportType: string): boolean {
+  return CARDIO_SPORTS.some((re) => re.test(sportType));
+}
+
 export function isRunning(sportType: string): boolean {
   return /run/i.test(sportType);
 }

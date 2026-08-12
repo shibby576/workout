@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "note": "An eval case is a (fixture, intent) PAIR. The same session becomes a different test depending on the intent attached to it, so deliberate mismatches are first-class cases. The athlete profile is pinned here for reproducibility — the app itself takes these per user from the setup gate and stores them per user; nothing is hardcoded in app code.",
+  "note": "An eval case is a (fixture, intent) PAIR. The same session becomes a different test depending on the intent attached to it, so deliberate mismatches are first-class cases. The athlete profile is pinned here for reproducibility \u2014 the app itself takes these per user from the setup gate and stores them per user; nothing is hardcoded in app code.",
   "athlete": {
     "zones": null,
     "ftp": null,
@@ -26,7 +26,7 @@
       "mismatch": true,
       "fixture": "19642518909",
       "intent": "base",
-      "tests": "Deliberate mismatch. A hard interval session labelled base — the note should say emphatically too hard, not hedge."
+      "tests": "Deliberate mismatch. A hard interval session labelled base \u2014 the note should say emphatically too hard, not hedge."
     },
     {
       "id": "2x10-threshold",
@@ -40,7 +40,7 @@
       "set": "core",
       "fixture": "18568372609",
       "intent": "threshold",
-      "tests": "A single continuous block. Structure edge case — one work rep is not a failed interval session."
+      "tests": "A single continuous block. Structure edge case \u2014 one work rep is not a failed interval session."
     },
     {
       "id": "10x1-vo2max",
@@ -83,7 +83,7 @@
       "set": "robustness",
       "fixture": "19422777332",
       "intent": "vo2max",
-      "tests": "No distance stream at all. Highest-severity faithfulness check: the model must not invent a pace. Not representative of real use (this is a lifting-based HIIT session), hence robustness rather than core."
+      "tests": "Non-cardio session (lifting-based HIIT). Must DECLINE with a single sentence rather than coach it, and must not invent a pace from absent distance data. Robustness, not core."
     }
   ]
 }
