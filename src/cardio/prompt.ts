@@ -13,6 +13,7 @@
 // Pure and isomorphic — the API route and the eval harness build identical
 // prompts, so evals score the same text the app sends.
 
+import { INTENT_STRUCTURE } from './intentBands.ts';
 import { INTENT_LABELS, duration, pace, shortDuration } from './format.ts';
 import type { HrZone, SessionSummary, Signal } from './sessionSummary.ts';
 import { ZONES, isRide } from './zones.ts';
@@ -87,6 +88,13 @@ THE RECOMMENDATION
   a rep count, a recovery length, a change to how the session is structured.
 - Prefer the lever that fixes the largest gap the data shows. If execution matched
   the intent, recommend the next progression instead.
+- Prescribe the STRUCTURE, not only a pace. "Run 6x2min at 7:15 off 90s jog" is a
+  recommendation; "run at the prescribed pace" is not. Where the structure itself
+  is the problem, say what to change it to — 1x20 becomes 2x10, ten 1-minute reps
+  become five 2-3 minute reps.
+- Check your recommendation against the data before giving it. If heart rate was
+  too LOW, a slower pace cannot be the fix. If the athlete was already at target
+  effort, going harder is not the fix.
 - Recovery periods between reps are part of the session. If the recoveries were
   far slower or longer than the work they support, that is worth a recommendation
   of its own.
@@ -127,6 +135,10 @@ function fmtSignal(s: Signal): string {
       return d.confidence === 'low'
         ? `Reads as an interval session, roughly ${d.workReps} work efforts — inferred from the pace/power trace rather than marked laps, so treat the count as approximate and do not quote it as exact.`
         : `Detected as an interval session: ${d.workReps} work reps (from the athlete's own lap markers).`;
+    case 'reps_too_short_for_hr':
+      return `IMPORTANT: the work reps averaged ${d.medianRepSec}s, shorter than the 60-90s heart rate needs to climb. That is why heart rate stayed below the target band — the reps ended before it arrived. Do NOT recommend running slower; that would lower heart rate further. Recommend longer reps (2-3 minutes) or shorter/faster recoveries so heart rate stays elevated between efforts.`;
+    case 'structure_contradicts_intent':
+      return `Structure mismatch: this was labelled ${d.intent}, but it was run as roughly ${d.workReps} hard efforts of about ${d.medianRepSec}s each — an interval workout, not a steady ${d.intent} session. Say so; the athlete may have picked the wrong session type.`;
     case 'hill_finish':
       return `The session ends with a ${d.durationSec}s climb at ${d.gradePct}% grade (+${d.climbMeters}m). This is the route home, not a rep — it is excluded from the rep count. Do not call it an extra interval.`;
     case 'rep_fade':
@@ -176,6 +188,14 @@ export function buildCoachPrompt(s: SessionSummary): CoachPrompt {
   const intentLabel = INTENT_LABELS[s.intent];
 
   L.push(`INTENDED SESSION TYPE: ${intentLabel.toUpperCase()}`);
+  L.push('');
+  // Without this the model knows the targets but not what the session is FOR,
+  // so every recommendation collapses to "change your pace".
+  const struct = INTENT_STRUCTURE[s.intent];
+  L.push('WHAT THIS SESSION TYPE IS FOR');
+  L.push(`- Purpose: ${struct.purpose}`);
+  L.push(`- Normal shape: ${struct.shape}`);
+  L.push(`- Levers that actually change it: ${struct.levers}`);
   L.push('');
   L.push('SESSION');
   const indoor = /virtual|trainer|indoor|weight|hiit|highintensity|workout/i.test(s.activity.sportType);

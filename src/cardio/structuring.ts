@@ -737,13 +737,12 @@ export function structureSession(input: StructuringInput): SessionSummary {
   // Device laps first when the athlete actually pressed lap (they mark the reps
   // exactly); otherwise fall back to finding the efforts in the output stream.
   let structure = detail.laps ? detectStructureFromLaps(detail.laps, Boolean(wattsData?.length)) : undefined;
-  // Stream detection only runs when the intent implies reps. Amplitude alone
-  // cannot separate a hard rep from a hill or a coast — measured across real
-  // sessions, a hike separated its two halves more strongly (2.9x) than any
-  // genuine interval workout did (1.3-1.6x). Gating on intent sidesteps that
-  // entirely: we are judging the session against what it was meant to be, so
-  // looking for reps is only meaningful when reps were the plan.
-  if (!structure && INTENT_BANDS[intent].emphasizeSustainability) {
+  // Detection now runs for every intent, so a session STRUCTURED as intervals
+  // can be reported even when it was labelled base — "you called this base but
+  // ran it as 6x2" is exactly the mismatch worth surfacing. What stays gated is
+  // whether structure drives BANDING (below): scoping the verdict to work reps
+  // only makes sense when reps were the plan.
+  if (!structure) {
     structure = detectStructureFromStreams(
       samples,
       wattsData,
@@ -766,7 +765,12 @@ export function structureSession(input: StructuringInput): SessionSummary {
   // For interval sessions, band the WORK reps only: the recovery jogs are
   // meant to be easy, so counting them would make every well-executed interval
   // session read as "too easy".
-  const workWindows = structure?.reps?.filter((r) => r.kind === 'work').map((r) => ({ startSec: r.startSec, endSec: r.endSec }));
+  // Only scope the verdict to work reps when the intent actually called for
+  // reps. A base run that happened to contain surges is still judged as a whole.
+  const bandOnReps = INTENT_BANDS[intent].emphasizeSustainability;
+  const workWindows = bandOnReps
+    ? structure?.reps?.filter((r) => r.kind === 'work').map((r) => ({ startSec: r.startSec, endSec: r.endSec }))
+    : undefined;
   const scope: IntentBandResult['scope'] = workWindows?.length ? 'work-reps' : 'whole-session';
 
   // Banding needs actual time in zones. Summary-only activities (no streams —
@@ -952,6 +956,48 @@ function deriveSignals(s: SessionSummary, intent: IntentType): Signal[] {
         confidence: s.structure.confidence,
       },
     });
+    // The lever that a model gets backwards if left to infer it. Heart rate
+    // needs 60-90s to climb, so reps shorter than that end before it arrives:
+    // the session reads easy on HR however hard the running was, and telling
+    // the athlete to slow down would make it worse. Computed here rather than
+    // left to the model, because it got this exactly inverted.
+    const work = (s.structure.reps ?? []).filter((r) => r.kind === 'work');
+    const sus0 = s.structure.sustainability;
+    if (band.emphasizeSustainability && work.length >= 3 && sus0) {
+      const durations = work.map((r) => r.durationSec).sort((a, b) => a - b);
+      const medianSec = durations[Math.floor(durations.length / 2)];
+      // Keyed on reps that failed to reach intensity rather than total
+      // below-band time: on a ten-rep session half the reps can miss while
+      // aggregate in-band time still looks healthy.
+      const missedShare = 1 - sus0.repsHittingTarget / Math.max(1, sus0.totalWorkReps);
+      if (medianSec < 90 && missedShare >= 0.2) {
+        signals.push({
+          code: 'reps_too_short_for_hr',
+          detail: {
+            medianRepSec: medianSec,
+            reps: work.length,
+            hit: sus0.repsHittingTarget,
+            total: sus0.totalWorkReps,
+          },
+        });
+      }
+    }
+
+    // Structure that contradicts the stated intent: reps on a day meant to be
+    // steady. Worth naming, since the athlete may simply have mislabelled it.
+    if (!band.emphasizeSustainability && s.structure.workReps >= 3) {
+      const work2 = (s.structure.reps ?? []).filter((r) => r.kind === 'work');
+      const durations = work2.map((r) => r.durationSec).sort((a, b) => a - b);
+      signals.push({
+        code: 'structure_contradicts_intent',
+        detail: {
+          intent,
+          workReps: s.structure.workReps,
+          medianRepSec: durations[Math.floor(durations.length / 2)] ?? 0,
+        },
+      });
+    }
+
     if (s.structure.hillFinish) {
       const h = s.structure.hillFinish;
       signals.push({

@@ -504,11 +504,14 @@ describe('stream-based interval detection', () => {
     assert.equal(s.structure?.hillFinish, undefined);
   });
 
-  it('does not hunt for reps when the intent is not an interval session', () => {
-    // Amplitude alone cannot tell a rep from a hill, so detection is gated on
-    // intent. A base run is judged on its zone distribution, not phantom reps.
+  it('reports structure on a steady intent but does not band on it', () => {
+    // Detection runs for every intent so "you called this base but ran 6x2" can
+    // be surfaced. What stays gated is whether the verdict narrows to the work
+    // reps — that only makes sense when reps were the plan.
     const s = run(intervals(120, 90, 6, 450, 220), 'base');
-    assert.equal(s.structure, undefined);
+    assert.equal(s.structure?.workReps, 6);
+    assert.equal(s.intentBand?.scope, 'whole-session');
+    assert.ok(s.signals.some((x) => x.code === 'structure_contradicts_intent'));
   });
 
   it('ignores brief surges that are too small a share of the session', () => {

@@ -65,6 +65,55 @@ export const PACE_TARGETS: Record<IntentType, PaceTarget> = {
   vo2max: { minSpeedRatio: 1.04, maxSpeedRatio: 1.1 },
 };
 
+// What each session type's STRUCTURE is for, and which levers change it.
+//
+// Without this the model only knows the target zones and paces, so whenever a
+// session misses it reaches for the one lever it understands — pace. That
+// produced a note telling the athlete to run SLOWER on a session whose problem
+// was that heart rate never got high enough, which is the opposite of the fix.
+// Structure is often the real lever, and it has to be stated.
+export interface IntentStructure {
+  /** The physiological point of the session. */
+  purpose: string;
+  /** How the session is normally built. */
+  shape: string;
+  /** Which levers actually change the outcome, in priority order. */
+  levers: string;
+}
+
+export const INTENT_STRUCTURE: Record<IntentType, IntentStructure> = {
+  recovery: {
+    purpose: 'Promote blood flow and recovery without adding training stress.',
+    shape: 'One continuous easy effort. Duration is modest; there are no reps.',
+    levers:
+      'Slow down, shorten, or walk the hills. There is no such thing as too easy here, so never recommend more intensity. A little heart-rate drift late in a long easy session is normal and not a problem on its own.',
+  },
+  base: {
+    purpose:
+      'Accumulate aerobic volume at low intensity. The adaptation comes from TIME at easy effort, not from speed.',
+    shape:
+      'One continuous steady effort at an even pace from the first mile. No reps, no surges, no fast finish.',
+    levers:
+      'Hold one pace for the whole run rather than drifting up. Start at target pace instead of easing into it. If holding target pace still drives heart rate above the band, the honest read is that easy pace is currently slower than expected — slow down further rather than pushing.',
+  },
+  threshold: {
+    purpose:
+      'Accumulate time at lactate threshold. Total time IN the band is what drives the adaptation, so volume at the right effort beats hitting an exact pace.',
+    shape:
+      'Either one sustained block (e.g. 1x20min) or a few long reps with short recoveries (e.g. 2x10min, 3x8min off 2min jog). Recoveries are short by design — the point is to keep lactate elevated, not to fully recover.',
+    levers:
+      'Change total time in the band, rep length, or recovery length. Splitting one long block into two shorter reps (1x20 becomes 2x10) is the standard fix when the single block cannot be held to the end. Going HARDER is almost never the fix: it shortens what can be sustained and defeats the session.',
+  },
+  vo2max: {
+    purpose:
+      'Accumulate time at or near VO2max. The adaptation needs the athlete to actually REACH that intensity and stay there, so time spent at the top end is what counts.',
+    shape:
+      'Repeated hard efforts of roughly 2-5 minutes with recoveries short enough that heart rate stays elevated (e.g. 6x2min off 90s, 5x3min off 2min).',
+    levers:
+      'Rep length and recovery length come first, pace second. Heart rate takes 60-90 seconds to climb, so reps shorter than about 90 seconds end before heart rate arrives — in that case the session reads easy on heart rate no matter how fast the running was. The fix is LONGER reps or SHORTER/faster recoveries, never slower running. Recommending a slower pace when heart rate was already too low is self-defeating.',
+  },
+};
+
 export const INTENT_BANDS: Record<IntentType, IntentBand> = {
   recovery: {
     targetZones: [1],
