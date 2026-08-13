@@ -17,7 +17,7 @@ Is anything stated that you cannot verify or do not understand? What is missing?
 > You opened too fast against your 7:45 threshold pace, averaging 6:56. This caused your output to fade 7% by the last rep and your heart rate to drift upward relative to effort. Next time, start your first few reps 15 seconds per mile slower to sustain the intensity.
 
 **Your notes:**
-
+Overall good. want more detail on the recommendation. does that mean have the frist few reps at 8min, then the last few reps at 7:45? and adjust based on HR?
 
 ---
 
@@ -30,7 +30,7 @@ Is anything stated that you cannot verify or do not understand? What is missing?
 > You ran this base session 45 seconds per mile faster than your 9:14-10:20 target range, placing you in zone 4 for 45% of the run. This excessive intensity caused a positive split as you slowed from 8:39 to 9:39 pace. Next base run, start at 9:45 pace to enforce the correct aerobic effort.
 
 **Your notes:**
-
+its a little unclear that for a base run that i want to keep the pace cosnsitent and in which zone. in last sentence we can clairfy that the correct structure for a base run is to start at a base pace, like 945 and keep it there. ALSO IMPORTANT, this didnt call out that this was actually a 6x2 structured workout, i think thats worth calling out if that patterend in noticed, but not critical
 
 ---
 
@@ -43,7 +43,7 @@ Is anything stated that you cannot verify or do not understand? What is missing?
 > You executed the prescribed effort by heart rate, but your pace of 8:07 was slower than your 7:45 threshold target. This suggests your threshold pace may be overestimated or you were affected by heat or fatigue. Re-test your threshold pace with a recent benchmark effort to confirm your correct training zones.
 
 **Your notes:**
-
+I think this is a fair asessment and i like th intuition. In terms of next steps, i think in addition to resetting the pace is to run the next session at 745 and see how it goes hr wise? otherwise looks good
 
 ---
 
@@ -56,7 +56,7 @@ Is anything stated that you cannot verify or do not understand? What is missing?
 > Your execution matched the intent. Heart rate drifted upward relative to effort, indicating fatigue or heat stress. Schedule your next hard session for a cooler time of day.
 
 **Your notes:**
-
+agreed that heat is not the only potential cange here, how about changing the workout structure from 1x20 to 2x10?
 
 ---
 
@@ -69,7 +69,7 @@ Is anything stated that you cannot verify or do not understand? What is missing?
 > You ran the work reps too fast at 6:54/mile, against a 7:03-7:27 target. This caused you to spend most of the session in zone 3, not the intended zones 4 and 5. Run your next set at the prescribed pace to hit the correct intensity.
 
 **Your notes:**
-
+this seeems off. Its saying that i ran fast yet my hr was too low, this running slower will make my hr higher? thats not right. The right feedback is that i need to consistently run at pace that that it doesnt drift lower through the session. also maybe need to take shorter breaks or faster breaks. Lots missing on this one
 
 ---
 
@@ -82,7 +82,7 @@ Is anything stated that you cannot verify or do not understand? What is missing?
 > You ran a recovery session but your heart rate drifted upward, indicating rising effort. This caused 21% of the session to exceed the target intensity. Next time, reduce your initial pace to keep your heart rate from climbing.
 
 **Your notes:**
-
+I think thid is fair. 
 
 ---
 
@@ -95,7 +95,7 @@ Is anything stated that you cannot verify or do not understand? What is missing?
 > You rode harder than your base intent, causing your heart rate to drift upward as you slowed. Next time, cap your early effort to keep your heart rate from rising through the session.
 
 **Your notes:**
-
+if you look at the power profile this was actually an interval vo2 ride. that was the real intent. agreedd though that if we eval as a base that keeping hr lower earlier would help. 
 
 ---
 
@@ -108,7 +108,7 @@ Is anything stated that you cannot verify or do not understand? What is missing?
 > Your recovery effort was correctly executed, but your heart rate drifted upward over the hike. This suggests accumulating fatigue or heat stress. Prioritize hydration and cooling before your next similar effort.
 
 **Your notes:**
-
+i dont know that its necessarily bad that hr drifts up a bit for recovery. i think the suggestions are fine, but i thnk jsut saying to watch hr but also stay hydrted helps.
 
 ---
 
@@ -121,7 +121,7 @@ Is anything stated that you cannot verify or do not understand? What is missing?
 > You ran this threshold session at 10:42 per mile, well below your 7:45 threshold pace target. This kept your effort primarily in zone 2, so the session did not stress your intended intensity. Structure it as intervals next time, aiming for the 7:31-7:59 pace range.
 
 **Your notes:**
-
+be clear on what those intervals should be (ie 10x2) 
 
 ---
 
