@@ -3,7 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Cardio Feedback</title>
+    <title>Cardio Coach</title>
+
+    <!-- Its own manifest, separate from the tracker's. The tracker's manifest
+         has start_url "/", so without this an installed icon would open the
+         tracker no matter which page it was added from. -->
+    <link rel="manifest" href="/cardio.webmanifest" />
+    <meta name="theme-color" content="#2fb37e" />
+
+    <!-- iOS ignores the manifest for home-screen installs and reads these
+         instead; apple-mobile-web-app-title sets the label under the icon. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Cardio" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   </head>
   <body>
     <div id="root"></div>

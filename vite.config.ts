@@ -1,9 +1,33 @@
+import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
+/** vite-plugin-pwa injects the tracker's manifest into every HTML entry, which
+ *  leaves cardio.html carrying two manifest links. Browsers use the first, so
+ *  the cardio one already wins, but relying on document order to decide which
+ *  app an installed icon opens is too subtle to leave in place.
+ *
+ *  The injection happens after transformIndexHtml, so the emitted file is
+ *  rewritten once the bundle is on disk. */
+function stripTrackerManifestFromCardio() {
+  return {
+    name: 'strip-tracker-manifest-from-cardio',
+    async closeBundle() {
+      const file = resolve(import.meta.dirname, 'dist/cardio.html');
+      try {
+        const html = await readFile(file, 'utf8');
+        const stripped = html.replace(/<link rel="manifest" href="\/manifest\.webmanifest">\s*/g, '');
+        if (stripped !== html) await writeFile(file, stripped);
+      } catch {
+        // dist/cardio.html only exists after a production build.
+      }
+    },
+  };
+}
+
 export default defineConfig({
   build: {
     rollupOptions: {
@@ -43,5 +67,6 @@ export default defineConfig({
         ],
       },
     }),
+    stripTrackerManifestFromCardio(),
   ],
 })
