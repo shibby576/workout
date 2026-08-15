@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
-import { exportFeedback, findFeedback, saveFeedback, type NoteFeedback as Entry } from '../feedback.js';
+import {
+  findFeedback,
+  loadFeedback,
+  saveFeedback,
+  shareFeedback,
+  summariseFeedback,
+  type NoteFeedback as Entry,
+} from '../feedback.js';
 import type { SessionSummary } from '../sessionSummary.js';
 
 // Rating lives directly under the note, because the useful reaction happens
@@ -18,6 +25,7 @@ export function NoteFeedbackControls({ summary, note, model }: Props) {
   const [saved, setSaved] = useState<Entry | undefined>(undefined);
   const [open, setOpen] = useState(false);
   const [comment, setComment] = useState('');
+  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     const existing = findFeedback(activityId, summary.intent);
@@ -43,14 +51,19 @@ export function NoteFeedbackControls({ summary, note, model }: Props) {
     setSaved(entry);
   }
 
-  function download() {
-    const blob = new Blob([exportFeedback()], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'cardio-feedback.json';
-    a.click();
-    URL.revokeObjectURL(url);
+  async function copyDigest() {
+    try {
+      await navigator.clipboard.writeText(summariseFeedback());
+      setToast(`Copied ${loadFeedback().length} note(s) — paste them anywhere.`);
+    } catch {
+      setToast('Copy failed — use Share instead.');
+    }
+  }
+
+  async function share() {
+    const how = await shareFeedback();
+    if (how === 'shared') setToast('Shared.');
+    else if (how === 'downloaded') setToast('Downloaded cardio-feedback.json.');
   }
 
   return (
@@ -99,10 +112,23 @@ export function NoteFeedbackControls({ summary, note, model }: Props) {
             >
               Save
             </button>
-            <button type="button" className="btn-link" onClick={download}>
-              Export all feedback
-            </button>
+            <span className="feedback-actions">
+              {/* Copy gives a short digest to paste into a conversation; Share
+                  sends the full JSON, with the SessionSummary the eval harness
+                  needs, through the OS share sheet. */}
+              <button type="button" className="btn-link" onClick={copyDigest}>
+                Copy all
+              </button>
+              <button type="button" className="btn-link" onClick={share}>
+                Share file
+              </button>
+            </span>
           </div>
+          {toast && (
+            <div className="hint" style={{ marginTop: 'var(--space-2)' }}>
+              {toast}
+            </div>
+          )}
         </>
       )}
     </div>

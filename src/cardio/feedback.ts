@@ -54,3 +54,53 @@ export function findFeedback(activityId: string, intent: string): NoteFeedback |
 export function exportFeedback(): string {
   return `${JSON.stringify({ exportedAt: new Date().toISOString(), entries: loadFeedback() }, null, 2)}\n`;
 }
+
+/** A short human-readable digest, small enough to paste into a message.
+ *  The full export carries each SessionSummary and runs to kilobytes per entry,
+ *  which is right for the eval harness and wrong for a phone conversation. */
+export function summariseFeedback(): string {
+  const all = loadFeedback();
+  if (all.length === 0) return 'No feedback saved yet.';
+  const lines = all.map((f) => {
+    const when = f.at.slice(0, 10);
+    return [
+      `## ${f.activityName} — ${f.intent} (${f.verdict.toUpperCase()}) ${when}`,
+      `https://www.strava.com/activities/${f.activityId.replace(/^strava-/, '')}`,
+      `model: ${f.model}`,
+      `note: ${f.note}`,
+      f.comment ? `said: ${f.comment}` : '(no comment)',
+    ].join('\n');
+  });
+  return `${all.length} rated note(s)\n\n${lines.join('\n\n')}\n`;
+}
+
+/** Share the full export through the OS share sheet where available — on a
+ *  phone that means AirDrop, Messages or mail, which actually gets the file
+ *  somewhere useful. Falls back to a download on desktop. */
+export async function shareFeedback(): Promise<'shared' | 'downloaded' | 'cancelled'> {
+  const text = exportFeedback();
+  const file = new File([text], 'cardio-feedback.json', { type: 'application/json' });
+
+  const nav = navigator as Navigator & {
+    canShare?: (data: { files?: File[] }) => boolean;
+    share?: (data: { files?: File[]; title?: string }) => Promise<void>;
+  };
+
+  if (nav.share && nav.canShare?.({ files: [file] })) {
+    try {
+      await nav.share({ files: [file], title: 'Cardio feedback' });
+      return 'shared';
+    } catch {
+      // The user dismissed the sheet, or the platform refused the file.
+      return 'cancelled';
+    }
+  }
+
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'cardio-feedback.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  return 'downloaded';
+}

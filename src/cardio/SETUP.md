@@ -86,3 +86,29 @@ Then re-run the verifier offline against it:
 npx tsx scripts/verify-strava.mjs \
   --fixture evals/fixtures/19642518909.json --intent vo2max --threshold-pace 7:30
 ```
+
+## 7. Rating notes and getting the feedback off your phone
+
+Every generated note carries a **Good / Off** rating and a comment box. Rating a
+note stores the full `SessionSummary` alongside the comment, so the case can be
+replayed against any model later without a Strava call — which matters because
+access tokens expire within hours of the run that prompted the complaint.
+
+Two ways to get it out, under **Add note**:
+
+- **Copy all** — a short digest (activity, verdict, the note, what you said).
+  Small enough to paste into a message. Use this to discuss a note.
+- **Share file** — the full JSON through the OS share sheet, so on a phone you
+  can AirDrop or mail it to yourself. On desktop it downloads.
+
+Then turn the export into replayable eval cases:
+
+```bash
+npx tsx scripts/import-feedback.mjs ~/Downloads/cardio-feedback.json
+```
+
+That writes `evals/feedback-cases/<activityId>-<intent>.json`, one per rated
+note, each carrying the exact input the note was generated from.
+
+Storage is `localStorage`, so it is per-browser and per-device: export before
+clearing site data, and note that phone and laptop keep separate sets.
