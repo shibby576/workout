@@ -5,6 +5,7 @@ import { FeedbackCard } from './components/FeedbackCard.js';
 import { IntentPicker } from './components/IntentPicker.js';
 import { SelectWorkout } from './components/SelectWorkout.js';
 import { SetupGate } from './components/SetupGate.js';
+import { formatPaceInput } from './parsePace.js';
 import { isProfileReady, loadProfile, saveProfile } from './profile.js';
 import type { IntentType, SessionSummary } from './sessionSummary.js';
 import { stravaSource } from './source.js';
@@ -19,6 +20,7 @@ export function App() {
   const [profile, setProfile] = useState<AthleteProfile>(loadProfile());
   const [setupDone, setSetupDone] = useState(() => isProfileReady(loadProfile()));
   const [redirectNote, setRedirectNote] = useState<string | null>(null);
+  const [editingSettings, setEditingSettings] = useState(false);
   const [observedMaxHr, setObservedMaxHr] = useState<number | null>(null);
 
   const [activities, setActivities] = useState<StravaActivitySummary[]>([]);
@@ -35,7 +37,14 @@ export function App() {
   const [noteLoading, setNoteLoading] = useState(false);
   const [noteError, setNoteError] = useState<string | null>(null);
 
-  const step: Step = !connected || !setupDone ? 'setup' : summary || building ? 'card' : activity ? 'intent' : 'select';
+  const step: Step =
+    !connected || !setupDone || editingSettings
+      ? 'setup'
+      : summary || building
+        ? 'card'
+        : activity
+          ? 'intent'
+          : 'select';
 
   // Handle the OAuth redirect back from Strava.
   useEffect(() => {
@@ -96,6 +105,10 @@ export function App() {
     saveProfile(next);
     setProfile(next);
     setSetupDone(true);
+    setEditingSettings(false);
+    // The stored summary was computed with the old numbers, so drop it rather
+    // than leave a card on screen that no longer reflects the settings.
+    reset();
   }
 
   const writeNote = useCallback(async (forSummary: SessionSummary) => {
@@ -162,6 +175,7 @@ export function App() {
       )}
 
       {step === 'select' && (
+        <>
         <SelectWorkout
           activities={activities}
           loading={listState === 'loading'}
@@ -169,6 +183,11 @@ export function App() {
           onSelect={setActivity}
           onRetry={loadActivities}
         />
+        <button type="button" className="btn-link" onClick={() => setEditingSettings(true)}>
+          Settings — max HR {profile.maxHr ?? '—'}
+          {profile.thresholdPaceSecPerMi ? `, threshold ${formatPaceInput(profile.thresholdPaceSecPerMi)}/mi` : ''}
+        </button>
+        </>
       )}
 
       {step === 'intent' && activity && <IntentPicker activity={activity} onPick={handlePickIntent} />}

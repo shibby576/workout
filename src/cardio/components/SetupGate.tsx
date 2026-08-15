@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getStravaAuthorizeUrl } from '../../lib/strava.js';
+import { formatPaceInput, parsePaceInput } from '../parsePace.js';
 import type { AthleteProfile } from '../zones.js';
 
 // One-time setup: connect Strava, then fill the anchors Strava can't give us.
@@ -15,22 +16,13 @@ interface Props {
   redirectNote: string | null;
 }
 
-/** "7:30" or "450" -> seconds per mile. */
-function parsePace(input: string): number | null {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-  const mmss = /^(\d+):([0-5]\d)$/.exec(trimmed);
-  if (mmss) return Number(mmss[1]) * 60 + Number(mmss[2]);
-  const plain = Number(trimmed);
-  return Number.isFinite(plain) && plain > 0 ? plain : null;
-}
-
 export function SetupGate({ connected, profile, observedMaxHr, onSave, redirectNote }: Props) {
   const [maxHr, setMaxHr] = useState(String(profile.maxHr ?? observedMaxHr ?? ''));
   const [thresholdPace, setThresholdPace] = useState(
     profile.thresholdPaceSecPerMi ? formatPaceInput(profile.thresholdPaceSecPerMi) : '',
   );
   const [runningFtp, setRunningFtp] = useState(profile.runningFtp ? String(profile.runningFtp) : '');
+  const parsedPace = parsePaceInput(thresholdPace);
 
   if (!connected) {
     return (
@@ -89,10 +81,20 @@ export function SetupGate({ connected, profile, observedMaxHr, onSave, redirectN
         <input
           id="tpace"
           inputMode="numeric"
-          placeholder="7:30"
+          placeholder="745"
           value={thresholdPace}
           onChange={(e) => setThresholdPace(e.target.value)}
         />
+        {/* A phone keypad cannot type a colon, so "745" is accepted — and the
+            parsed value is echoed back, because reading it wrongly silently
+            skews every pace verdict afterwards. */}
+        <div className={parsedPace ? 'hint hint-ok' : 'hint'} style={{ marginTop: 'var(--space-1)' }}>
+          {thresholdPace.trim() === ''
+            ? 'Optional. Type 745 for 7:45 — no colon needed.'
+            : parsedPace
+              ? `Reading this as ${formatPaceInput(parsedPace)} per mile.`
+              : "Couldn't read that. Type 745 for 7:45, or 1030 for 10:30."}
+        </div>
       </div>
 
       <div className="field">
@@ -114,12 +116,12 @@ export function SetupGate({ connected, profile, observedMaxHr, onSave, redirectN
       <button
         type="button"
         className="btn"
-        disabled={!canSave}
+        disabled={!canSave || (thresholdPace.trim() !== '' && !parsedPace)}
         onClick={() =>
           onSave({
             ...profile,
             maxHr: Number.isFinite(parsedHr) && parsedHr > 0 ? parsedHr : profile.maxHr,
-            thresholdPaceSecPerMi: parsePace(thresholdPace),
+            thresholdPaceSecPerMi: parsedPace,
             runningFtp: Number(runningFtp) > 0 ? Number(runningFtp) : null,
           })
         }
@@ -130,8 +132,3 @@ export function SetupGate({ connected, profile, observedMaxHr, onSave, redirectN
   );
 }
 
-function formatPaceInput(secPerMi: number): string {
-  const m = Math.floor(secPerMi / 60);
-  const s = Math.round(secPerMi % 60);
-  return `${m}:${String(s).padStart(2, '0')}`;
-}

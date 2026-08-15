@@ -350,3 +350,6 @@ body {
   background: var(--color-neutral-100);
   resize: vertical;
 }
+.hint-ok {
+  color: var(--color-accent-700);
+}
