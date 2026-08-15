@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import handler from '../../api/strava/callback';
-import { safeReturnPath } from './returnPath';
+import handler from '../../api/strava/callback.js';
+import { safeReturnPath } from './returnPath.js';
 
 function mockRes() {
   const r: any = { redirects: [] as string[] };

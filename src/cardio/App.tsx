@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { isStravaConnected } from '../lib/strava';
-import { coachErrorMessage, generateCoachNote } from './coach.ts';
-import { FeedbackCard } from './components/FeedbackCard.tsx';
-import { IntentPicker } from './components/IntentPicker.tsx';
-import { SelectWorkout } from './components/SelectWorkout.tsx';
-import { SetupGate } from './components/SetupGate.tsx';
-import { isProfileReady, loadProfile, saveProfile } from './profile.ts';
-import type { IntentType, SessionSummary } from './sessionSummary.ts';
-import { stravaSource } from './source.ts';
-import { structureSession } from './structuring.ts';
-import type { StravaActivitySummary } from './stravaTypes.ts';
-import type { AthleteProfile } from './zones.ts';
+import { isStravaConnected } from '../lib/strava.js';
+import { coachErrorMessage, generateCoachNote } from './coach.js';
+import { FeedbackCard } from './components/FeedbackCard.js';
+import { IntentPicker } from './components/IntentPicker.js';
+import { SelectWorkout } from './components/SelectWorkout.js';
+import { SetupGate } from './components/SetupGate.js';
+import { isProfileReady, loadProfile, saveProfile } from './profile.js';
+import type { IntentType, SessionSummary } from './sessionSummary.js';
+import { stravaSource } from './source.js';
+import { structureSession } from './structuring.js';
+import type { StravaActivitySummary } from './stravaTypes.js';
+import type { AthleteProfile } from './zones.js';
 
 type Step = 'setup' | 'select' | 'intent' | 'card';
 

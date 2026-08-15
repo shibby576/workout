@@ -20,7 +20,7 @@
 //    the reps) can't be seen as a zone once 5/6/7 are merged — it shows up as
 //    rep-to-rep fade instead, so sustainability is emphasized here.
 
-import type { HrZone, IntentType } from './sessionSummary';
+import type { HrZone, IntentType } from './sessionSummary.js';
 
 export const INTENT_BAND_CONFIG_VERSION = '1';
 

@@ -2,10 +2,10 @@
 // JavaScript and resolves specifiers at runtime, so a ".ts" specifier crashes
 // the deployed function with FUNCTION_INVOCATION_FAILED even though bundlers
 // and Node's type stripping both accept it. Local runs use tsx instead.
-import type { ApiRequest, ApiResponse } from '../strava/_lib';
-import { buildCoachPrompt } from '../../src/cardio/prompt';
-import { DEFAULT_MODEL, GenerationError, openRouterProvider } from '../../src/cardio/provider';
-import type { SessionSummary } from '../../src/cardio/sessionSummary';
+import type { ApiRequest, ApiResponse } from '../strava/_lib.js';
+import { buildCoachPrompt } from '../../src/cardio/prompt.js';
+import { DEFAULT_MODEL, GenerationError, openRouterProvider } from '../../src/cardio/provider.js';
+import type { SessionSummary } from '../../src/cardio/sessionSummary.js';
 
 // Generation runs server-side because the model key must never reach the
 // browser. The client posts the SessionSummary it already computed — structuring

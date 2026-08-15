@@ -1,4 +1,4 @@
-import { ensureFreshTokens, fetchActivities, parseCookies, type ApiRequest, type ApiResponse } from './_lib';
+import { ensureFreshTokens, fetchActivities, parseCookies, type ApiRequest, type ApiResponse } from './_lib.js';
 
 // Cardio sport types the feedback app surfaces. Lifting and everything else is
 // filtered out (this app is cardio-only). Distinct from the older routine

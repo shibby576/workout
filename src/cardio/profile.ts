@@ -4,8 +4,8 @@
 //
 // localStorage only — no backend in v1 (see DESIGN.md).
 
-import type { StravaAthleteZones } from './stravaTypes.ts';
-import type { AthleteProfile } from './zones.ts';
+import type { StravaAthleteZones } from './stravaTypes.js';
+import type { AthleteProfile } from './zones.js';
 
 const KEY = 'cardio.profile.v1';
 

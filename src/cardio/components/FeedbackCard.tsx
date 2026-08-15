@@ -1,6 +1,6 @@
-import { INTENT_LABELS, duration, miles, pace, paceRange, shortDuration } from '../format.ts';
-import type { HrZone, SessionSummary } from '../sessionSummary.ts';
-import { ZONES } from '../zones.ts';
+import { INTENT_LABELS, duration, miles, pace, paceRange, shortDuration } from '../format.js';
+import type { HrZone, SessionSummary } from '../sessionSummary.js';
+import { ZONES } from '../zones.js';
 
 // The feedback card. Every number is framed against the stated intent — the
 // point isn't "here is your data", it's "here is how this session read against

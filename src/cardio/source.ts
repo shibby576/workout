@@ -2,7 +2,7 @@
 // implementation, but structuring and generation only ever see this interface,
 // so a Garmin/Whoop/Oura source can slot in later without touching them.
 
-import type { RawSession, StravaActivitySummary, StravaProfile } from './stravaTypes';
+import type { RawSession, StravaActivitySummary, StravaProfile } from './stravaTypes.js';
 
 export interface WorkoutSource {
   readonly id: 'strava';

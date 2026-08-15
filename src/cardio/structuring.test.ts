@@ -7,10 +7,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { structureSession } from './structuring.ts';
-import type { StructuringInput } from './structuring.ts';
-import type { AthleteProfile } from './zones.ts';
-import type { RawSession, StravaActivityDetail, StravaStreamSet } from './stravaTypes.ts';
+import { structureSession } from './structuring.js';
+import type { StructuringInput } from './structuring.js';
+import type { AthleteProfile } from './zones.js';
+import type { RawSession, StravaActivityDetail, StravaStreamSet } from './stravaTypes.js';
 
 // 7:00/mi threshold pace. ftp is the CYCLING number; runningFtp is separate.
 const ATHLETE: AthleteProfile = {

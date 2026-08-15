@@ -1,5 +1,5 @@
-import { ensureFreshTokens, fetchActivities, parseCookies, type ApiRequest, type ApiResponse } from './_lib';
-import type { Workout } from '../../src/types';
+import { ensureFreshTokens, fetchActivities, parseCookies, type ApiRequest, type ApiResponse } from './_lib.js';
+import type { Workout } from '../../src/types.js';
 
 interface StravaActivity {
   id: number;

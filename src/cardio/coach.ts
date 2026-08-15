@@ -1,7 +1,7 @@
 // Client-side call to the generation endpoint. The model key lives server-side,
 // so the browser only ever posts the SessionSummary it already computed.
 
-import type { SessionSummary } from './sessionSummary.ts';
+import type { SessionSummary } from './sessionSummary.js';
 
 export interface CoachNote {
   note: string;

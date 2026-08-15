@@ -1,6 +1,6 @@
-import { INTENT_BLURBS, INTENT_LABELS, activityDate } from '../format.ts';
-import type { IntentType } from '../sessionSummary.ts';
-import type { StravaActivitySummary } from '../stravaTypes.ts';
+import { INTENT_BLURBS, INTENT_LABELS, activityDate } from '../format.js';
+import type { IntentType } from '../sessionSummary.js';
+import type { StravaActivitySummary } from '../stravaTypes.js';
 
 const INTENTS: IntentType[] = ['recovery', 'base', 'threshold', 'vo2max'];
 

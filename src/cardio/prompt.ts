@@ -13,10 +13,10 @@
 // Pure and isomorphic — the API route and the eval harness build identical
 // prompts, so evals score the same text the app sends.
 
-import { INTENT_STRUCTURE } from './intentBands';
-import { INTENT_LABELS, duration, pace, shortDuration } from './format';
-import type { HrZone, SessionSummary, Signal } from './sessionSummary';
-import { ZONES, isRide } from './zones';
+import { INTENT_STRUCTURE } from './intentBands.js';
+import { INTENT_LABELS, duration, pace, shortDuration } from './format.js';
+import type { HrZone, SessionSummary, Signal } from './sessionSummary.js';
+import { ZONES, isRide } from './zones.js';
 
 export interface CoachPrompt {
   system: string;

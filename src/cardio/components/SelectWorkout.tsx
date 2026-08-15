@@ -1,5 +1,5 @@
-import { activityDate, duration, miles } from '../format.ts';
-import type { StravaActivitySummary } from '../stravaTypes.ts';
+import { activityDate, duration, miles } from '../format.js';
+import type { StravaActivitySummary } from '../stravaTypes.js';
 
 const METERS_PER_MILE = 1609.344;
 

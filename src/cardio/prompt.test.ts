@@ -6,11 +6,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { buildCoachPrompt } from './prompt.ts';
-import { structureSession } from './structuring.ts';
-import type { IntentType } from './sessionSummary.ts';
-import type { RawSession, StravaActivityDetail, StravaStreamSet } from './stravaTypes.ts';
-import type { AthleteProfile } from './zones.ts';
+import { buildCoachPrompt } from './prompt.js';
+import { structureSession } from './structuring.js';
+import type { IntentType } from './sessionSummary.js';
+import type { RawSession, StravaActivityDetail, StravaStreamSet } from './stravaTypes.js';
+import type { AthleteProfile } from './zones.js';
 
 const ATHLETE: AthleteProfile = {
   zones: null,

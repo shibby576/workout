@@ -5,8 +5,8 @@
 // Preference order is always "the athlete's own configured zones" over an
 // estimate — a real max-HR-derived or FTP-derived boundary beats a formula.
 
-import type { HrZone } from './sessionSummary';
-import type { StravaAthleteZones } from './stravaTypes';
+import type { HrZone } from './sessionSummary.js';
+import type { StravaAthleteZones } from './stravaTypes.js';
 
 export interface AthleteProfile {
   zones: StravaAthleteZones | null; // from Strava, when profile:read_all is granted

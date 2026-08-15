@@ -5,7 +5,7 @@ import {
   parseCookies,
   type ApiRequest,
   type ApiResponse,
-} from './_lib';
+} from './_lib.js';
 
 // Returns the rich per-session data for one activity: full detail (splits,
 // laps, power flags) plus the time-series streams. This is the raw input to the

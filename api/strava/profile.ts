@@ -6,7 +6,7 @@ import {
   parseCookies,
   type ApiRequest,
   type ApiResponse,
-} from './_lib';
+} from './_lib.js';
 
 // Athlete zones + FTP for the one-time setup gate. Both require the
 // profile:read_all OAuth scope; when it's absent (or the athlete hasn't set

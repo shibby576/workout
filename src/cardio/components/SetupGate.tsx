@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { getStravaAuthorizeUrl } from '../../lib/strava';
-import type { AthleteProfile } from '../zones.ts';
+import { getStravaAuthorizeUrl } from '../../lib/strava.js';
+import type { AthleteProfile } from '../zones.js';
 
 // One-time setup: connect Strava, then fill the anchors Strava can't give us.
 // Zones and FTP arrive automatically with the profile:read_all scope; max HR

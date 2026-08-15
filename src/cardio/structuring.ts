@@ -10,7 +10,7 @@ import {
   INTENT_BANDS,
   INTENT_BAND_CONFIG_VERSION,
   PACE_TARGETS,
-} from './intentBands.ts';
+} from './intentBands.js';
 import type {
   DataAvailability,
   DriftSummary,
@@ -27,8 +27,8 @@ import type {
   Signal,
   Split,
   SustainabilitySummary,
-} from './sessionSummary';
-import type { RawSession, StravaLap, StravaSplit, StravaStreamSet } from './stravaTypes';
+} from './sessionSummary.js';
+import type { RawSession, StravaLap, StravaSplit, StravaStreamSet } from './stravaTypes.js';
 import {
   ZONES,
   isCardioSport,
@@ -40,7 +40,7 @@ import {
   type AthleteProfile,
   type ResolvedHrZones,
   type ResolvedPowerZones,
-} from './zones.ts';
+} from './zones.js';
 
 const METERS_PER_MILE = 1609.344;
 

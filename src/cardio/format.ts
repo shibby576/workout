@@ -2,7 +2,7 @@
 // SessionSummary stays pure numbers — the eval harness compares values, not
 // strings.
 
-import type { IntentType } from './sessionSummary';
+import type { IntentType } from './sessionSummary.js';
 
 export const INTENT_LABELS: Record<IntentType, string> = {
   recovery: 'Recovery',

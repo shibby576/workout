@@ -1,14 +1,15 @@
 // Two constraints learned the hard way, both of which crash the deployed
 // function with FUNCTION_INVOCATION_FAILED while passing every local check:
 //
-//   1. Specifiers must be extensionless. Vercel compiles these functions to
-//      JavaScript and resolves at runtime, so "./_lib.ts" points at a file that
-//      no longer exists.
-//   2. No runtime imports from outside /api. Every API function that has worked
-//      here imports from src/ only as `import type`, which is erased at compile
-//      time. Value imports from src/ are not proven to be bundled, so the
-//      redirect helpers below are kept local rather than shared.
-import { exchangeCodeForTokens, setTokenCookies, type ApiRequest, type ApiResponse } from './_lib';
+//   1. Specifiers need a ".js" extension. Vercel compiles these to JavaScript
+//      and package.json sets "type": "module", so the output is ESM — which
+//      requires explicit extensions at runtime. TypeScript maps ".js" back to
+//      the ".ts" source at compile time, so this is the correct form to write.
+//      Extensionless fails with ERR_MODULE_NOT_FOUND; ".ts" fails because the
+//      file is gone once compiled.
+//   2. The redirect helpers are kept local rather than imported from src/, so
+//      this function has no cross-directory runtime dependency to resolve.
+import { exchangeCodeForTokens, setTokenCookies, type ApiRequest, type ApiResponse } from './_lib.js';
 
 /** The page that started the OAuth flow, carried through Strava as `state`.
  *  Validated to a same-origin path so the parameter cannot bounce the athlete
