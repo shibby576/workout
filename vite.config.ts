@@ -21,6 +21,13 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['apple-touch-icon.png'],
+      workbox: {
+        // The PWA shell rewrites every navigation to index.html. With two apps
+        // in one deploy that swallowed /cardio.html — the browser was served the
+        // tracker instead — and it would swallow the OAuth callback too, since
+        // returning from Strava is a navigation request the server must handle.
+        navigateFallbackDenylist: [/^\/cardio\.html/, /^\/api\//],
+      },
       manifest: {
         name: 'Holistic Fitness Tracker',
         short_name: 'Fitness',

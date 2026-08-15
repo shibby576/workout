@@ -5,6 +5,10 @@ export function getStravaAuthorizeUrl(): string {
     client_id: import.meta.env.VITE_STRAVA_CLIENT_ID,
     redirect_uri: `${window.location.origin}/api/strava/callback`,
     response_type: 'code',
+    // Carry the page that started the flow so the callback can return there.
+    // Two apps share this deploy, and connecting from /cardio.html previously
+    // dropped the athlete on the tracker at /.
+    state: window.location.pathname,
     approval_prompt: 'auto',
     // profile:read_all is needed to read athlete HR/power zones and FTP for the
     // cardio-feedback setup gate; activity:read_all covers activity + streams.
