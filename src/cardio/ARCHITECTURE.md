@@ -94,6 +94,35 @@ The signals it can emit:
 `power_without_threshold`, `no_hr_data`, `no_power_data`, `summary_data_only`,
 `not_cardio`.
 
+#### How signals are decided
+
+All of them are threshold rules in `deriveSignals()` in `structuring.ts`. No
+model is involved, and each one is a single line to change.
+
+| Signal | Fires when |
+| --- | --- |
+| `zone_mismatch` / `on_target` | Time in a fault direction exceeds 25% of the judged time |
+| `time_above_band` / `time_below_band` | Off-band time that did *not* trip the 25% bar — the nuance the verdict deliberately tolerates |
+| `high_drift` / `negative_drift` | Decoupling ≥ +5% or ≤ −5% |
+| `negative_split` / `positive_split` | First and last split differ by ≥ 3%, steady sessions only |
+| `reps_too_short_for_hr` | Median work rep < 90s **and** ≥ 20% of reps missed target |
+| `recoveries_too_long` | Median recovery > 1.5× median work |
+| `rep_fade` / `rep_build` | Output changed ≥ 5% from first work rep to last |
+| `reps_missed_target` | Any work rep failed to reach the target band |
+| `hill_finish` | Final effort ≥ 5% grade **and** ≥ 3 points steeper than earlier reps |
+| `structure_contradicts_intent` | ≥ 3 work reps detected on an intent that expects steady running |
+| `expected_intervals_but_steady` | An interval intent with no reps detected |
+| `dominant_zone` | Whichever zone holds the most time |
+| `low_banding_confidence` | Banding fell back to heart rate instead of power |
+| `cannot_band`, `no_hr_data`, `no_power_data`, `summary_data_only`, `no_pace_target`, `power_without_threshold`, `not_cardio` | Presence checks on what the session and profile actually contained |
+
+Two of these thresholds are grounded in physiology — 90s for heart-rate lag, and
+the grade split that separates a climb from a rep. **The rest are judgement
+calls**, tuned when real sessions proved them wrong: the 20% work-fraction floor
+exists because an easy run's two hardest minutes were being read as an interval
+session, and the 25% fault bar was set by the athlete, who considers ~15% of a
+recovery run in Z4 tolerable.
+
 ### 6. Render the metrics — `components/FeedbackCard.tsx`
 
 Renders immediately, before any model call. Verdict line, pace vs. target, time
