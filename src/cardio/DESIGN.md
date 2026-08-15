@@ -177,3 +177,40 @@ Defer a real datastore until cross-device / multi-user matters.
    with anchored examples, pick coverage cases from real fixtures, build a Node
    harness, score human + LLM-judge, compare strong default vs hosted
    open-source (OpenRouter). Built together — not auto-generated.
+
+## State and open threads
+
+Steps 0-6 of the build sequence are complete and deployed. What is live: Strava
+connect, setup, workout selection, intent, the computed card, a generated note,
+regenerate, and in-app feedback capture. Generation runs DeepSeek v3.2, chosen
+by a six-model eval.
+
+Decided and not to be relitigated without reason:
+
+- Strava as the v1 source, behind `WorkoutSource` so Garmin/Whoop can follow.
+- Structuring is 100% code. No model in the structuring step.
+- Intent gates whether banding narrows to work reps; detection itself runs for
+  every intent so a mislabelled session can be called out.
+- Faults are asymmetric per intent; "too hard" is a fault for all but vo2max.
+- Non-cardio sessions are declined rather than coached.
+- Note voice: direct and analytical, 2-4 sentences, 60 words, always ending in a
+  prescriptive recommendation.
+
+Open, in rough priority order:
+
+1. **Threshold pace is entered by hand.** Strava returns `best_efforts` on runs
+   (1K/1mi/5K/10K), so a recent 10K is a usable proxy and Riegel converts other
+   distances. Manual entry stays as the override. This matters because a wrong
+   anchor silently skews every pace verdict — it already did once.
+2. **Saved feedback cards.** The spec's nice-to-have, and the prerequisite for
+   any cross-workout view.
+3. **Calibration in the rubric.** Almost no model hedges the LOW CONFIDENCE
+   flag, so either the prompt must require it or the anchors are too strict to
+   discriminate. Unresolved.
+4. **Drift thresholds are not intent-aware.** `high_drift` fires at 5% for every
+   intent, but a little late drift on a long easy session is normal.
+5. **localStorage is per-device.** Rating on a phone and reviewing on a laptop
+   keeps two separate sets. This is the point at which a small backend starts to
+   earn its keep.
+6. **Parked deliberately:** counterfactual reasoning ("had you run 35s faster,
+   would HR have tipped into vo2max?"). Interesting, real scope, not now.
