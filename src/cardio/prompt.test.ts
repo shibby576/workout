@@ -207,3 +207,33 @@ describe('non-cardio sessions', () => {
     }
   });
 });
+
+describe('metrics that are not findings', () => {
+  it('labels negligible decoupling so it is not reported as drift', () => {
+    // A real note claimed heart rate "drifted upward" on a session with 2.3%
+    // decoupling, which the card itself calls well-controlled.
+    const n = 600;
+    const p = promptFor(
+      {
+        time: stream(Array.from({ length: n }, (_, i) => i)),
+        heartrate: stream(Array.from({ length: n }, () => 150)),
+        velocity_smooth: stream(Array.from({ length: n }, () => 3)),
+      },
+      'threshold',
+    );
+    assert.match(p.user, /AEROBIC DECOUPLING: .*NEGLIGIBLE/);
+    assert.match(p.user, /Do not describe this as drift/);
+  });
+
+  it('does not invite commentary on ordinary recoveries', () => {
+    const p = promptFor(steady(600, 150), 'threshold');
+    assert.match(p.system, /Only comment on the recovery periods if the brief explicitly flags them/);
+    assert.match(p.system, /normal recoveries are what an interval session is\n  supposed to have/);
+  });
+
+  it('forbids inventing a mechanism between unrelated facts', () => {
+    const p = promptFor(steady(600, 150), 'threshold');
+    assert.match(p.system, /Do not invent a mechanism/);
+    assert.match(p.system, /A wrong explanation is worse than no explanation/);
+  });
+});

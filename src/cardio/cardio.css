@@ -297,3 +297,56 @@ body {
   padding: 0 0 var(--space-3);
   cursor: pointer;
 }
+
+/* --- note feedback --- */
+.feedback {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-divider);
+}
+.feedback-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.feedback-label {
+  font-size: 12px;
+  color: var(--color-neutral-600);
+}
+.feedback-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.chip {
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-neutral-300);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.chip-on {
+  background: var(--color-accent-100);
+  border-color: var(--color-accent-400);
+  color: var(--color-accent-700);
+}
+.chip-on-bad {
+  background: #fdf0e3;
+  border-color: #e8b982;
+  color: #8a5116;
+}
+.feedback-text {
+  width: 100%;
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-neutral-300);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 13px;
+  background: var(--color-neutral-100);
+  resize: vertical;
+}

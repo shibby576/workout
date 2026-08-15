@@ -61,6 +61,10 @@ WHAT TO WRITE — follow this shape
 2. What it caused: the consequence visible in the data, stated as a link, not two
    separate facts. "You opened at 6:45, and output dropped 7% by the last rep"
    beats listing both.
+   BUT only where the brief actually supports the link. Do not invent a mechanism
+   between two facts that merely appear together. If the brief does not say X
+   caused Y, either state them separately or say nothing about the connection.
+   A wrong explanation is worse than no explanation.
 3. What to change: a prescriptive recommendation. This is required.
 
 EXPLAIN, DON'T JUST CITE
@@ -95,9 +99,10 @@ THE RECOMMENDATION
 - Check your recommendation against the data before giving it. If heart rate was
   too LOW, a slower pace cannot be the fix. If the athlete was already at target
   effort, going harder is not the fix.
-- Recovery periods between reps are part of the session. If the recoveries were
-  far slower or longer than the work they support, that is worth a recommendation
-  of its own.
+- Only comment on the recovery periods if the brief explicitly flags them as
+  disproportionate. Recovery durations are listed for context; their presence is
+  not itself a finding, and normal recoveries are what an interval session is
+  supposed to have.
 
 HARD RULES
 - If the brief says the session is not a cardio session, ignore every other
@@ -135,6 +140,8 @@ function fmtSignal(s: Signal): string {
       return d.confidence === 'low'
         ? `Reads as an interval session, roughly ${d.workReps} work efforts — inferred from the pace/power trace rather than marked laps, so treat the count as approximate and do not quote it as exact.`
         : `Detected as an interval session: ${d.workReps} work reps (from the athlete's own lap markers).`;
+    case 'recoveries_too_long':
+      return `Recoveries averaged ${d.medianRecoverySec}s against ${d.medianWorkSec}s of work — long enough that heart rate falls away between efforts, so each rep restarts from a lower point. Shortening them keeps the intensity accumulating.`;
     case 'reps_too_short_for_hr':
       return `IMPORTANT: the work reps averaged ${d.medianRepSec}s, shorter than the 60-90s heart rate needs to climb. That is why heart rate stayed below the target band — the reps ended before it arrived. Do NOT recommend running slower; that would lower heart rate further. Recommend longer reps (2-3 minutes) or shorter/faster recoveries so heart rate stays elevated between efforts.`;
     case 'structure_contradicts_intent':
@@ -278,8 +285,18 @@ export function buildCoachPrompt(s: SessionSummary): CoachPrompt {
   }
 
   if (s.drift) {
+    // The bare number invited a note claiming heart rate "drifted upward" on a
+    // session with 2.3% decoupling, which is nothing. The reading is given with
+    // the value so it cannot be mistaken for a finding.
+    const d = s.drift.decouplingPct;
+    const reading =
+      d >= 5
+        ? 'NOTABLE: heart rate climbed relative to output'
+        : d <= -5
+          ? 'NOTABLE: output rose relative to heart rate, a strong finish'
+          : 'NEGLIGIBLE — output and heart rate stayed coupled. This is a well-controlled effort and is NOT a finding. Do not describe this as drift.';
     L.push('');
-    L.push(`AEROBIC DECOUPLING: ${s.drift.decouplingPct}% (positive = heart rate rising relative to output)`);
+    L.push(`AEROBIC DECOUPLING: ${d}% — ${reading}`);
   }
 
   L.push('');

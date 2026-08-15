@@ -1,4 +1,5 @@
 import { INTENT_LABELS, duration, miles, pace, paceRange, shortDuration } from '../format.js';
+import { NoteFeedbackControls } from './NoteFeedback.js';
 import type { HrZone, SessionSummary } from '../sessionSummary.js';
 import { ZONES } from '../zones.js';
 
@@ -9,6 +10,7 @@ import { ZONES } from '../zones.js';
 interface Props {
   summary: SessionSummary;
   note: string | null;
+  noteModel: string | null;
   noteLoading: boolean;
   noteError: string | null;
   onRegenerate(): void;
@@ -25,7 +27,7 @@ const METRIC_LABEL: Record<'power' | 'pace' | 'hr', string> = {
   hr: 'heart rate',
 };
 
-export function FeedbackCard({ summary, note, noteLoading, noteError, onRegenerate }: Props) {
+export function FeedbackCard({ summary, note, noteModel, noteLoading, noteError, onRegenerate }: Props) {
   const { intentBand, paceTarget, heartRate, power, drift, structure } = summary;
   const intentLabel = INTENT_LABELS[summary.intent];
   const onTarget = intentBand?.fault === 'none';
@@ -190,9 +192,12 @@ export function FeedbackCard({ summary, note, noteLoading, noteError, onRegenera
             Reading the session…
           </p>
         ) : note ? (
-          <p className="note" style={{ margin: 0 }}>
-            {note}
-          </p>
+          <>
+            <p className="note" style={{ margin: 0 }}>
+              {note}
+            </p>
+            <NoteFeedbackControls summary={summary} note={note} model={noteModel ?? 'unknown'} />
+          </>
         ) : (
           <p className="muted" style={{ marginBottom: 0 }}>
             Not wired up yet — the generation step comes next. Everything above is computed, not generated.

@@ -998,6 +998,22 @@ function deriveSignals(s: SessionSummary, intent: IntentType): Signal[] {
       });
     }
 
+    // Whether recoveries were disproportionate is a computation, not a
+    // judgement call for the model. Left to inference it claimed "long, slow
+    // recoveries" on a session whose recoveries were normal, and invented a
+    // mechanism by which they raised heart rate — which is backwards.
+    const rest = (s.structure.reps ?? []).filter((r) => r.kind === 'recovery');
+    if (band.emphasizeSustainability && work.length >= 2 && rest.length >= 1) {
+      const medWork = [...work.map((r) => r.durationSec)].sort((a, b) => a - b)[Math.floor(work.length / 2)];
+      const medRest = [...rest.map((r) => r.durationSec)].sort((a, b) => a - b)[Math.floor(rest.length / 2)];
+      if (medWork > 0 && medRest > medWork * 1.5) {
+        signals.push({
+          code: 'recoveries_too_long',
+          detail: { medianRecoverySec: medRest, medianWorkSec: medWork },
+        });
+      }
+    }
+
     if (s.structure.hillFinish) {
       const h = s.structure.hillFinish;
       signals.push({

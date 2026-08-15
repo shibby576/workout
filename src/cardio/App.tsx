@@ -31,6 +31,7 @@ export function App() {
   const [building, setBuilding] = useState(false);
 
   const [note, setNote] = useState<string | null>(null);
+  const [noteModel, setNoteModel] = useState<string | null>(null);
   const [noteLoading, setNoteLoading] = useState(false);
   const [noteError, setNoteError] = useState<string | null>(null);
 
@@ -103,6 +104,7 @@ export function App() {
     try {
       const result = await generateCoachNote(forSummary);
       setNote(result.note);
+      setNoteModel(result.model);
     } catch (err) {
       setNoteError(coachErrorMessage(err instanceof Error ? err.message : ''));
     } finally {
@@ -179,6 +181,7 @@ export function App() {
             <FeedbackCard
               summary={summary}
               note={note}
+              noteModel={noteModel}
               noteLoading={noteLoading}
               noteError={noteError}
               onRegenerate={() => void writeNote(summary)}
