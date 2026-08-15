@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import handler from '../../api/strava/callback.ts';
+import handler from '../../api/strava/callback';
+import { safeReturnPath } from './returnPath';
 
 function mockRes() {
   const r: any = { redirects: [] as string[] };
@@ -8,6 +9,18 @@ function mockRes() {
   r.redirect = (_c: number, url: string) => r.redirects.push(url);
   return r;
 }
+
+describe('return-path validation', () => {
+  // The handler keeps a local copy of this logic so the deployed function has
+  // no runtime imports from outside /api; these assertions pin the shared
+  // reference implementation the handler mirrors.
+  it('accepts a same-origin path and rejects other origins', () => {
+    assert.equal(safeReturnPath('/cardio.html'), '/cardio.html');
+    for (const evil of ['//evil.com', '/\\evil.com', 'https://evil.com', 'javascript:alert(1)', undefined, 42]) {
+      assert.equal(safeReturnPath(evil as unknown), '/', `should reject ${String(evil)}`);
+    }
+  });
+});
 
 describe('oauth callback return path', () => {
   it('returns to the page that started the flow', async () => {

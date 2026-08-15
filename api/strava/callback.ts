@@ -1,10 +1,30 @@
-// NOTE: imports here must stay extensionless. Vercel compiles these functions
-// to JavaScript and resolves specifiers at runtime, so a "./_lib.ts" specifier
-// crashes the deployed function with FUNCTION_INVOCATION_FAILED even though
-// bundlers and Node's type stripping both accept it. The validation logic lives
-// in ../../src/cardio/returnPath so it can still be unit-tested directly.
+// Two constraints learned the hard way, both of which crash the deployed
+// function with FUNCTION_INVOCATION_FAILED while passing every local check:
+//
+//   1. Specifiers must be extensionless. Vercel compiles these functions to
+//      JavaScript and resolves at runtime, so "./_lib.ts" points at a file that
+//      no longer exists.
+//   2. No runtime imports from outside /api. Every API function that has worked
+//      here imports from src/ only as `import type`, which is erased at compile
+//      time. Value imports from src/ are not proven to be bundled, so the
+//      redirect helpers below are kept local rather than shared.
 import { exchangeCodeForTokens, setTokenCookies, type ApiRequest, type ApiResponse } from './_lib';
-import { safeReturnPath, withStatus } from '../../src/cardio/returnPath';
+
+/** The page that started the OAuth flow, carried through Strava as `state`.
+ *  Validated to a same-origin path so the parameter cannot bounce the athlete
+ *  to another site: it must start with a single slash, and must not begin with
+ *  "//" or "/\", both of which browsers read as protocol-relative URLs pointing
+ *  at another host. Mirrored in src/cardio/returnPath.ts, which is where the
+ *  unit tests for this logic live. */
+function safeReturnPath(state: unknown): string {
+  if (typeof state !== 'string' || !state.startsWith('/')) return '/';
+  if (state.startsWith('//') || state.startsWith('/\\')) return '/';
+  return state;
+}
+
+function withStatus(returnTo: string, status: string): string {
+  return `${returnTo}${returnTo.includes('?') ? '&' : '?'}strava=${status}`;
+}
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   const code = req.query.code;
