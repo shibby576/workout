@@ -11,6 +11,8 @@ Two independent apps share one deploy:
 They share only the Strava API routes (`api/strava/`) and the design tokens
 (`src/styles/tokens.css`).
 
+Read `src/cardio/ARCHITECTURE.md` for how the app works end to end — the single
+label the athlete provides, the order of operations, and where the prompt lives.
 Read `src/cardio/DESIGN.md` before changing cardio behaviour — it records why
 each decision was made. `cardio-feedback-app-spec.md` is the living product
 spec. `src/cardio/SETUP.md` covers deployment and the scripts.
