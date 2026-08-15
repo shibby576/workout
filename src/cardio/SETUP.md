@@ -61,10 +61,10 @@ prints what the structuring step made of them:
 
 ```bash
 # most recent cardio activity
-node --experimental-strip-types scripts/verify-strava.mjs --token <accessToken>
+npx tsx scripts/verify-strava.mjs --token <accessToken>
 
 # a specific one, with the anchors that unlock pace targets
-node --experimental-strip-types scripts/verify-strava.mjs \
+npx tsx scripts/verify-strava.mjs \
   --token <accessToken> --id 19642518909 --intent vo2max \
   --max-hr 190 --threshold-pace 7:30
 ```
@@ -83,6 +83,6 @@ node scripts/capture-fixture.mjs 19642518909 --token <accessToken>
 Then re-run the verifier offline against it:
 
 ```bash
-node --experimental-strip-types scripts/verify-strava.mjs \
+npx tsx scripts/verify-strava.mjs \
   --fixture evals/fixtures/19642518909.json --intent vo2max --threshold-pace 7:30
 ```

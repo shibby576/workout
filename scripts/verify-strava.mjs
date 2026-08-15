@@ -3,11 +3,11 @@
 // the structuring step made of it.
 //
 //   Live (needs your token):
-//     node --experimental-strip-types scripts/verify-strava.mjs --token <t>
-//     node --experimental-strip-types scripts/verify-strava.mjs --token <t> --id 19642518909 --intent vo2max
+//     npx tsx scripts/verify-strava.mjs --token <t>
+//     npx tsx scripts/verify-strava.mjs --token <t> --id 19642518909 --intent vo2max
 //
 //   Offline (a fixture captured earlier):
-//     node --experimental-strip-types scripts/verify-strava.mjs --fixture evals/fixtures/19642518909.json --intent vo2max
+//     npx tsx scripts/verify-strava.mjs --fixture evals/fixtures/19642518909.json --intent vo2max
 //
 // Options: --max-hr 190  --threshold-pace 7:30  --ftp 250
 //

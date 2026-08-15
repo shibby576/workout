@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Eval harness: generate a coach's note for every case, for one or more models.
 //
-//   node --experimental-strip-types scripts/run-eval.mjs
-//   node --experimental-strip-types scripts/run-eval.mjs --models anthropic/claude-sonnet-5,deepseek/deepseek-chat
-//   node --experimental-strip-types scripts/run-eval.mjs --runs 3 --set core
+//   npx tsx scripts/run-eval.mjs
+//   npx tsx scripts/run-eval.mjs --models anthropic/claude-sonnet-5,deepseek/deepseek-chat
+//   npx tsx scripts/run-eval.mjs --runs 3 --set core
 //
 // Writes evals/runs/<timestamp>/ containing:
 //   results.json  — every generation with its case and model

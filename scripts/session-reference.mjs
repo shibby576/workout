@@ -3,7 +3,7 @@
 // the computed facts, so a note can be judged against what the session actually
 // was without digging through results.json.
 //
-//   node --experimental-strip-types scripts/session-reference.mjs evals/runs/<stamp>
+//   npx tsx scripts/session-reference.mjs evals/runs/<stamp>
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -11,7 +11,7 @@ import { structureSession } from '../src/cardio/structuring.ts';
 
 const runDir = process.argv[2];
 if (!runDir) {
-  console.error('Usage: node --experimental-strip-types scripts/session-reference.mjs evals/runs/<stamp>');
+  console.error('Usage: npx tsx scripts/session-reference.mjs evals/runs/<stamp>');
   process.exit(1);
 }
 

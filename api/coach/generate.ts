@@ -1,11 +1,11 @@
-// Explicit .ts specifiers so this handler can be imported and exercised
-// directly under Node's type stripping — bundlers resolve either form, but Node
-// needs the extension, and being able to invoke the endpoint locally is worth
-// more than matching the older extensionless style in api/strava.
-import type { ApiRequest, ApiResponse } from '../strava/_lib.ts';
-import { buildCoachPrompt } from '../../src/cardio/prompt.ts';
-import { DEFAULT_MODEL, GenerationError, openRouterProvider } from '../../src/cardio/provider.ts';
-import type { SessionSummary } from '../../src/cardio/sessionSummary.ts';
+// Imports here must stay extensionless. Vercel compiles these functions to
+// JavaScript and resolves specifiers at runtime, so a ".ts" specifier crashes
+// the deployed function with FUNCTION_INVOCATION_FAILED even though bundlers
+// and Node's type stripping both accept it. Local runs use tsx instead.
+import type { ApiRequest, ApiResponse } from '../strava/_lib';
+import { buildCoachPrompt } from '../../src/cardio/prompt';
+import { DEFAULT_MODEL, GenerationError, openRouterProvider } from '../../src/cardio/provider';
+import type { SessionSummary } from '../../src/cardio/sessionSummary';
 
 // Generation runs server-side because the model key must never reach the
 // browser. The client posts the SessionSummary it already computed — structuring

@@ -2,11 +2,11 @@
 // Generate a coach's note from a saved fixture — the prompt-iteration loop.
 //
 //   Print the exact prompt the model would see, no API call:
-//     node --experimental-strip-types scripts/generate-note.mjs \
+//     npx tsx scripts/generate-note.mjs \
 //       --fixture evals/fixtures/19574288003.json --intent recovery --dry-run
 //
 //   Generate for real (needs OPENROUTER_API_KEY):
-//     node --experimental-strip-types scripts/generate-note.mjs \
+//     npx tsx scripts/generate-note.mjs \
 //       --fixture evals/fixtures/19574288003.json --intent recovery
 //
 //   Compare models, or sample the same model repeatedly:
