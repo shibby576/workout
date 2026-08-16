@@ -740,3 +740,41 @@ describe('splits', () => {
     assert.ok(s.signals.some((x) => x.code === 'negative_split'));
   });
 });
+
+describe('drift on an interval session', () => {
+  // From real feedback: on a vo2max session where heart rate climbed across the
+  // reps, the note recommended SHORTENING the recoveries. That is the fix for
+  // the opposite problem and would add to the strain that caused the drift.
+  it('marks upward drift on an interval session as across-reps', () => {
+    const n = 2400;
+    const cycle = (i: number) => Math.floor(i / 200) % 2 === 0;
+    const s = run(
+      {
+        time: stream(Array.from({ length: n }, (_, i) => i)),
+        watts: stream(Array.from({ length: n }, (_, i) => (cycle(i) ? 450 : 220))),
+        // Same output, steadily rising heart rate — textbook decoupling.
+        heartrate: stream(Array.from({ length: n }, (_, i) => (cycle(i) ? 170 : 140) + Math.floor(i / 120))),
+        velocity_smooth: stream(Array.from({ length: n }, (_, i) => (cycle(i) ? 4.5 : 2.4))),
+      },
+      'vo2max',
+    );
+    const drift = s.signals.find((x) => x.code === 'high_drift');
+    assert.ok(drift, 'drift should be detected');
+    assert.equal(drift?.detail?.acrossReps, true);
+  });
+
+  it('does not mark drift as across-reps on a steady session', () => {
+    const n = 1200;
+    const s = run(
+      {
+        time: stream(Array.from({ length: n }, (_, i) => i)),
+        heartrate: stream(Array.from({ length: n }, (_, i) => 140 + Math.floor(i / 60))),
+        velocity_smooth: stream(Array.from({ length: n }, () => 3)),
+      },
+      'base',
+    );
+    const drift = s.signals.find((x) => x.code === 'high_drift');
+    assert.ok(drift);
+    assert.equal(drift?.detail?.acrossReps, undefined);
+  });
+});

@@ -127,7 +127,9 @@ function fmtSignal(s: Signal): string {
     case 'time_below_band':
       return `Minor excursion: ${shortDuration(Number(d.sec))} (${d.pct}%) sat below the target band.`;
     case 'high_drift':
-      return `Heart rate climbed relative to output through the session (decoupling ${d.decouplingPct}%) — typically fatigue, heat or dehydration.`;
+      return d.acrossReps
+        ? `Heart rate climbed relative to output across the reps (decoupling ${d.decouplingPct}%) — strain accumulated faster than the recoveries cleared it. The levers are LONGER or EASIER recoveries, fewer reps, or a slower work pace. Do NOT recommend shortening the recoveries: that adds to the load and would make this worse.`
+        : `Heart rate climbed relative to output through the session (decoupling ${d.decouplingPct}%) — typically fatigue, heat or dehydration.`;
     case 'negative_drift':
       return `Output rose relative to heart rate through the session (decoupling ${d.decouplingPct}%) — a strong finish.`;
     case 'negative_split':

@@ -928,9 +928,19 @@ function deriveSignals(s: SessionSummary, intent: IntentType): Signal[] {
   }
 
   if (s.drift && Math.abs(s.drift.decouplingPct) >= 5) {
+    // On an interval session, upward drift means strain accumulated across the
+    // reps — so the recoveries were not doing their job. Which way to move them
+    // is stated here rather than left to inference: the model reached for
+    // "shorten the recoveries", which is the fix for the opposite problem (heart
+    // rate never reaching target) and makes accumulating drift worse.
+    const acrossReps = s.drift.decouplingPct > 0 && s.structure && band.emphasizeSustainability;
     signals.push({
       code: s.drift.decouplingPct > 0 ? 'high_drift' : 'negative_drift',
-      detail: { decouplingPct: s.drift.decouplingPct, method: s.drift.method },
+      detail: {
+        decouplingPct: s.drift.decouplingPct,
+        method: s.drift.method,
+        ...(acrossReps ? { acrossReps: true } : {}),
+      },
     });
   }
 
