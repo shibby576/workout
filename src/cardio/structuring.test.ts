@@ -741,29 +741,70 @@ describe('splits', () => {
   });
 });
 
-describe('drift on an interval session', () => {
+describe('strain on an interval session', () => {
   // From real feedback: on a vo2max session where heart rate climbed across the
-  // reps, the note recommended SHORTENING the recoveries. That is the fix for
-  // the opposite problem and would add to the strain that caused the drift.
-  it('marks upward drift on an interval session as across-reps', () => {
+  // reps, the note recommended SHORTENING the recoveries. Two things were wrong.
+  // Decoupling is a steady-state measure that should not be read on an interval
+  // set at all, and rising heart rate at HELD output is the expected response
+  // rather than a fault — so there was no correction to make in the first place.
+
+  it('reads rising heart rate at held output as normal, not a fault', () => {
     const n = 2400;
     const cycle = (i: number) => Math.floor(i / 200) % 2 === 0;
     const s = run(
       {
         time: stream(Array.from({ length: n }, (_, i) => i)),
         watts: stream(Array.from({ length: n }, (_, i) => (cycle(i) ? 450 : 220))),
-        // Same output, steadily rising heart rate — textbook decoupling.
+        // Same output, steadily rising heart rate.
         heartrate: stream(Array.from({ length: n }, (_, i) => (cycle(i) ? 170 : 140) + Math.floor(i / 120))),
         velocity_smooth: stream(Array.from({ length: n }, (_, i) => (cycle(i) ? 4.5 : 2.4))),
       },
       'vo2max',
     );
-    const drift = s.signals.find((x) => x.code === 'high_drift');
-    assert.ok(drift, 'drift should be detected');
-    assert.equal(drift?.detail?.acrossReps, true);
+    // The steady-state reading must not be emitted on an interval session.
+    assert.equal(s.signals.find((x) => x.code === 'high_drift'), undefined);
+    const strain = s.signals.find((x) => x.code === 'interval_strain');
+    assert.ok(strain, 'interval strain should be assessed');
+    assert.equal(strain?.detail?.verdict, 'output-held');
   });
 
-  it('does not mark drift as across-reps on a steady session', () => {
+  it('blames the opening pace when output faded and recoveries were conventional', () => {
+    const n = 2400;
+    const cycle = (i: number) => Math.floor(i / 200) % 2 === 0;
+    // Work reps decline 450 -> 390W across the set; recoveries match rep length.
+    const workWatts = (i: number) => 450 - Math.floor(i / 400) * 12;
+    const s = run(
+      {
+        time: stream(Array.from({ length: n }, (_, i) => i)),
+        watts: stream(Array.from({ length: n }, (_, i) => (cycle(i) ? workWatts(i) : 220))),
+        heartrate: stream(Array.from({ length: n }, (_, i) => (cycle(i) ? 170 : 140))),
+        velocity_smooth: stream(Array.from({ length: n }, (_, i) => (cycle(i) ? 4.5 : 2.4))),
+      },
+      'vo2max',
+    );
+    const strain = s.signals.find((x) => x.code === 'interval_strain');
+    assert.equal(strain?.detail?.verdict, 'opened-too-fast');
+  });
+
+  it('blames recovery length only when the recoveries were genuinely short', () => {
+    const n = 1800;
+    // 240s work / 60s recovery — well under the rep length it follows.
+    const cycle = (i: number) => i % 300 < 240;
+    const workWatts = (i: number) => 450 - Math.floor(i / 300) * 12;
+    const s = run(
+      {
+        time: stream(Array.from({ length: n }, (_, i) => i)),
+        watts: stream(Array.from({ length: n }, (_, i) => (cycle(i) ? workWatts(i) : 200))),
+        heartrate: stream(Array.from({ length: n }, (_, i) => (cycle(i) ? 172 : 150))),
+        velocity_smooth: stream(Array.from({ length: n }, (_, i) => (cycle(i) ? 4.5 : 2.2))),
+      },
+      'vo2max',
+    );
+    const strain = s.signals.find((x) => x.code === 'interval_strain');
+    assert.equal(strain?.detail?.verdict, 'recovery-too-short');
+  });
+
+  it('still reads decoupling on a steady session', () => {
     const n = 1200;
     const s = run(
       {
@@ -773,8 +814,7 @@ describe('drift on an interval session', () => {
       },
       'base',
     );
-    const drift = s.signals.find((x) => x.code === 'high_drift');
-    assert.ok(drift);
-    assert.equal(drift?.detail?.acrossReps, undefined);
+    assert.ok(s.signals.find((x) => x.code === 'high_drift'));
+    assert.equal(s.signals.find((x) => x.code === 'interval_strain'), undefined);
   });
 });

@@ -13,7 +13,7 @@
 // Pure and isomorphic — the API route and the eval harness build identical
 // prompts, so evals score the same text the app sends.
 
-import { INTENT_STRUCTURE } from './intentBands.js';
+import { INTENT_BANDS, INTENT_STRUCTURE } from './intentBands.js';
 import { INTENT_LABELS, duration, pace, shortDuration } from './format.js';
 import type { HrZone, SessionSummary, Signal } from './sessionSummary.js';
 import { ZONES, isRide } from './zones.js';
@@ -127,9 +127,17 @@ function fmtSignal(s: Signal): string {
     case 'time_below_band':
       return `Minor excursion: ${shortDuration(Number(d.sec))} (${d.pct}%) sat below the target band.`;
     case 'high_drift':
-      return d.acrossReps
-        ? `Heart rate climbed relative to output across the reps (decoupling ${d.decouplingPct}%) — strain accumulated faster than the recoveries cleared it. The levers are LONGER or EASIER recoveries, fewer reps, or a slower work pace. Do NOT recommend shortening the recoveries: that adds to the load and would make this worse.`
-        : `Heart rate climbed relative to output through the session (decoupling ${d.decouplingPct}%) — typically fatigue, heat or dehydration.`;
+      return `Heart rate climbed relative to output through the session (decoupling ${d.decouplingPct}%) — typically fatigue, heat or dehydration.`;
+    case 'interval_strain':
+      // One lever, already chosen. Handing over the alternatives is what produced
+      // the backwards recommendation — see the branch in structuring.ts.
+      if (d.verdict === 'output-held') {
+        return `Heart rate climbed across the set (${d.decouplingPct}%) but output HELD (${d.fadePct}% change from first rep to last). On an interval session that is the expected physiological response — heart rate rises at the same speed as heat and fatigue accumulate. It is NOT a fault, and there is nothing to correct. Do not prescribe a fix for it, and in particular do not suggest changing the recoveries.`;
+      }
+      if (d.verdict === 'recovery-too-short') {
+        return `Output fell ${d.fadePct}% across the set and the recoveries (${d.medianRecoverySec}s) were short against ${d.medianWorkSec}s work reps. The lever is LONGER recoveries — roughly as long as the rep they follow. Do NOT recommend shortening them.`;
+      }
+      return `Output fell ${d.fadePct}% across the set, so the pace chosen was not repeatable for this many reps. The lever is a SLOWER OPENING PACE — run the first reps at a speed that can still be held on the last one. Do NOT recommend changing the recoveries; recovery length is not the problem here.`;
     case 'negative_drift':
       return `Output rose relative to heart rate through the session (decoupling ${d.decouplingPct}%) — a strong finish.`;
     case 'negative_split':
@@ -286,7 +294,12 @@ export function buildCoachPrompt(s: SessionSummary): CoachPrompt {
     L.push('- One continuous effort; no intervals detected.');
   }
 
-  if (s.drift) {
+  // Decoupling is a steady-state measure and is not meaningful on an interval
+  // session, so it is withheld there rather than shown with a caveat — printing
+  // the number at all invited a note that narrated it as a finding. Interval
+  // sets get the `interval_strain` observation instead.
+  const onIntervals = !!s.structure && INTENT_BANDS[s.intent].emphasizeSustainability;
+  if (s.drift && !onIntervals) {
     // The bare number invited a note claiming heart rate "drifted upward" on a
     // session with 2.3% decoupling, which is nothing. The reading is given with
     // the value so it cannot be mistaken for a finding.

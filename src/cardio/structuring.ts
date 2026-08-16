@@ -155,6 +155,12 @@ function buildSplits(raw: StravaSplit[] | undefined): Split[] {
   }));
 }
 
+/** Upper median, matching the inline convention used elsewhere here. 0 when empty. */
+function medianOf(values: number[]): number {
+  if (values.length === 0) return 0;
+  return [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
+}
+
 /** Aerobic decoupling: output:HR ratio in the second half vs the first, over
  *  moving time. Positive = HR climbing relative to output (fatigue/heat). */
 function computeDrift(
@@ -927,20 +933,18 @@ function deriveSignals(s: SessionSummary, intent: IntentType): Signal[] {
     }
   }
 
-  if (s.drift && Math.abs(s.drift.decouplingPct) >= 5) {
-    // On an interval session, upward drift means strain accumulated across the
-    // reps — so the recoveries were not doing their job. Which way to move them
-    // is stated here rather than left to inference: the model reached for
-    // "shorten the recoveries", which is the fix for the opposite problem (heart
-    // rate never reaching target) and makes accumulating drift worse.
-    const acrossReps = s.drift.decouplingPct > 0 && s.structure && band.emphasizeSustainability;
+  // Aerobic decoupling is a STEADY-STATE measure. Friel's Pw:HR test — and the
+  // 5% bar that came with it — is defined for one continuous effort, and the
+  // convention is explicit that it should not be read on interval sessions at
+  // all: the work/recovery duty cycle, heart-rate lag on short reps and the
+  // climb home all move the number for reasons that have nothing to do with
+  // fatigue. So intervals are judged by `interval_strain` below instead, on the
+  // thing coaching actually asks of a set — did OUTPUT hold across it?
+  const onIntervals = !!s.structure && band.emphasizeSustainability;
+  if (s.drift && !onIntervals && Math.abs(s.drift.decouplingPct) >= 5) {
     signals.push({
       code: s.drift.decouplingPct > 0 ? 'high_drift' : 'negative_drift',
-      detail: {
-        decouplingPct: s.drift.decouplingPct,
-        method: s.drift.method,
-        ...(acrossReps ? { acrossReps: true } : {}),
-      },
+      detail: { decouplingPct: s.drift.decouplingPct, method: s.drift.method },
     });
   }
 
@@ -1045,6 +1049,41 @@ function deriveSignals(s: SessionSummary, intent: IntentType): Signal[] {
           code: 'reps_missed_target',
           detail: { hit: sus.repsHittingTarget, total: sus.totalWorkReps },
         });
+      }
+
+      // Which lever a strained interval set needs. This was left to the model as
+      // a list of plausible options and it picked the one that makes the problem
+      // worse, so the branch is computed and exactly one lever is handed over.
+      //
+      // The order is the one a coach works in:
+      //  1. Output held  -> heart rate rising across reps at the same speed is
+      //     the EXPECTED response (heat, accumulating fatigue, falling stroke
+      //     volume). It is not a fault and has no fix. This is the common case
+      //     and the one the app previously invented a correction for.
+      //  2. Output faded -> the set was not repeatable at the pace chosen. The
+      //     standard answer is a slower OPENING pace, not more recovery.
+      //  3. Output faded AND the recoveries were genuinely under convention
+      //     (VO2max recoveries run about as long as the rep they follow, or a
+      //     little shorter) -> the one case where lengthening them is the fix.
+      if (s.drift) {
+        const drifted = s.drift.decouplingPct >= 5;
+        const faded = sus.fadePct >= 5;
+        if (drifted || faded) {
+          const medWork = medianOf(work.map((r) => r.durationSec));
+          const medRest = medianOf(rest.map((r) => r.durationSec));
+          const shortRecoveries =
+            intent === 'vo2max' && medWork > 0 && medRest > 0 && medRest < medWork * 0.5;
+          signals.push({
+            code: 'interval_strain',
+            detail: {
+              verdict: !faded ? 'output-held' : shortRecoveries ? 'recovery-too-short' : 'opened-too-fast',
+              decouplingPct: s.drift.decouplingPct,
+              fadePct: sus.fadePct,
+              basis: sus.basis,
+              ...(faded && shortRecoveries ? { medianRecoverySec: medRest, medianWorkSec: medWork } : {}),
+            },
+          });
+        }
       }
     }
   } else if (band.emphasizeSustainability) {

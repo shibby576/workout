@@ -110,7 +110,7 @@ export const INTENT_STRUCTURE: Record<IntentType, IntentStructure> = {
     shape:
       'Repeated hard efforts of roughly 2-5 minutes with recoveries short enough that heart rate stays elevated (e.g. 6x2min off 90s, 5x3min off 2min).',
     levers:
-      'Rep length and recovery length come first, pace second — but which way to move them depends entirely on what went wrong, and the two cases point in OPPOSITE directions. (a) Heart rate never REACHED the target band: heart rate takes 60-90 seconds to climb, so reps shorter than about 90 seconds end before it arrives, and the session reads easy however fast the running was. There the fix is longer reps or shorter/faster recoveries, never slower running. (b) Heart rate CLIMBED through the session (drift): that is accumulating strain, and shortening the recoveries would add to it. There the fix is longer or easier recoveries, fewer reps, or a slower work pace. Never prescribe shorter recoveries for a session that drifted upward.',
+      'Rep length and recovery length come first, pace second. Heart rate takes 60-90 seconds to climb, so reps shorter than about 90 seconds end before it arrives and the session reads easy however fast the running was; the fix there is longer reps or shorter recoveries, never slower running. Recoveries are meant to run about as long as the rep they follow, or a little shorter. The set passes or fails on whether PACE HELD from the first rep to the last: heart rate rising across the reps at held pace is the normal response and needs no correction, while a pace that fades means the opening reps were too fast for the number of reps attempted.',
   },
 };
 

@@ -89,7 +89,7 @@ The signals it can emit:
 `dominant_zone`, `interval_session`, `structure_contradicts_intent`,
 `expected_intervals_but_steady`, `reps_too_short_for_hr`, `recoveries_too_long`,
 `reps_missed_target`, `rep_fade`, `rep_build`, `hill_finish`, `high_drift`,
-`negative_drift`, `negative_split`, `positive_split`, `pace_on_target`,
+`negative_drift`, `interval_strain`, `negative_split`, `positive_split`, `pace_on_target`,
 `pace_off_target`, `low_banding_confidence`, `cannot_band`, `no_pace_target`,
 `power_without_threshold`, `no_hr_data`, `no_power_data`, `summary_data_only`,
 `not_cardio`.
@@ -103,7 +103,8 @@ model is involved, and each one is a single line to change.
 | --- | --- |
 | `zone_mismatch` / `on_target` | Time in a fault direction exceeds 25% of the judged time |
 | `time_above_band` / `time_below_band` | Off-band time that did *not* trip the 25% bar — the nuance the verdict deliberately tolerates |
-| `high_drift` / `negative_drift` | Decoupling ≥ +5% or ≤ −5% |
+| `high_drift` / `negative_drift` | Decoupling ≥ +5% or ≤ −5%, **steady sessions only** |
+| `interval_strain` | An interval set drifted ≥ +5% or faded ≥ 5%. Carries the one lever to pull, already chosen |
 | `negative_split` / `positive_split` | First and last split differ by ≥ 3%, steady sessions only |
 | `reps_too_short_for_hr` | Median work rep < 90s **and** ≥ 20% of reps missed target |
 | `recoveries_too_long` | Median recovery > 1.5× median work |
@@ -115,6 +116,14 @@ model is involved, and each one is a single line to change.
 | `dominant_zone` | Whichever zone holds the most time |
 | `low_banding_confidence` | Banding fell back to heart rate instead of power |
 | `cannot_band`, `no_hr_data`, `no_power_data`, `summary_data_only`, `no_pace_target`, `power_without_threshold`, `not_cardio` | Presence checks on what the session and profile actually contained |
+
+Decoupling is deliberately **not** read on interval sessions. Friel's Pw:HR test
+and its 5% bar are defined for one continuous effort; on a set of reps the
+work/recovery duty cycle, heart-rate lag and the climb home all move the number
+for reasons unrelated to fatigue. Interval sets are judged by `interval_strain`
+instead, which keys on what coaching actually asks of a set — did *output* hold?
+Heart rate rising across reps at held output is the expected response, not a
+fault, so that branch prescribes nothing.
 
 Two of these thresholds are grounded in physiology — 90s for heart-rate lag, and
 the grade split that separates a climb from a rep. **The rest are judgement
