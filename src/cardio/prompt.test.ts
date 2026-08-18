@@ -237,3 +237,37 @@ describe('metrics that are not findings', () => {
     assert.match(p.system, /A wrong explanation is worse than no explanation/);
   });
 });
+
+describe('zone boundaries in the brief', () => {
+  // From real feedback: the note told the athlete to keep heart rate "below 150"
+  // on a recovery run whose target zone tops out at 114. The brief carried no bpm
+  // bounds at all, so the model interpolated one between the average and the max.
+  // The bounds were in the SessionSummary the whole time and simply unrendered.
+  it('states the target band in bpm and names the ceiling', () => {
+    const p = promptFor(steady(600, 120), 'recovery');
+    // 60% of a 190 max — the top of Z1, not the top of the tolerated Z2.
+    assert.match(p.user, /That band is anything up to 114 bpm/);
+    assert.match(p.user, /A ceiling you recommend must be 114 bpm/);
+    assert.doesNotMatch(p.user, /A floor you recommend/);
+  });
+
+  it('names the floor, not a ceiling, where the top zone has no bound', () => {
+    const p = promptFor(steady(600, 175), 'vo2max');
+    assert.match(p.user, /has no upper bound/);
+    assert.match(p.user, /A floor you recommend must be \d+ bpm/);
+    assert.doesNotMatch(p.user, /A ceiling you recommend/);
+  });
+
+  it('names both ends on a both-sided band', () => {
+    const p = promptFor(steady(600, 160), 'threshold');
+    assert.match(p.user, /That band is \d+–\d+ bpm/);
+    assert.match(p.user, /A ceiling you recommend must be/);
+    assert.match(p.user, /A floor you recommend must be/);
+  });
+
+  it('forbids inventing a heart-rate number', () => {
+    const p = promptFor(steady(600, 120), 'recovery');
+    assert.match(p.system, /Never state a heart-rate or power number that is not written in the brief/);
+    assert.match(p.system, /Do not\n  interpolate one from the average and the max/);
+  });
+});

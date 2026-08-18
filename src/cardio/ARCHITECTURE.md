@@ -174,7 +174,10 @@ INTENDED SESSION TYPE: THRESHOLD
 
 WHAT THIS SESSION TYPE IS FOR      <- purpose, shape, levers
 SESSION                            <- duration, distance, pace, HR, power
-INTENSITY VS INTENT                <- target zones, % in band, verdict, time in zone
+INTENSITY VS INTENT                <- target zones, % in band, verdict, time in
+                                      zone, and the band's actual bpm/watt
+                                      bounds with the end that is actionable
+                                      for this intent named explicitly
 PACE VS TARGET                     <- ran, target range, the anchor it came from
 STRUCTURE                          <- reps, durations, recoveries, fade
 AEROBIC DECOUPLING                 <- value WITH its reading, so a nothing-number

@@ -121,6 +121,9 @@ HARD RULES
   the training week, which you were not given. State the duration as context if
   it helps, but never call it ideal, optimal or correct, and never tell the
   athlete to hold, repeat or match a duration in future sessions.
+- Never state a heart-rate or power number that is not written in the brief. If you
+  recommend a ceiling or a floor, use the exact one the brief gives you. Do not
+  interpolate one from the average and the max, and do not reach for a round number.
 - Never prescribe medical advice or specific training loads you were not given.`;
 
 function fmtSignal(s: Signal): string {
@@ -201,6 +204,13 @@ function fmtSignal(s: Signal): string {
   }
 }
 
+/** HR and power bounds carry different key names; both reduce to [lo, hi]. The
+ *  top zone's ceiling is Infinity by construction — there is nothing above Z5. */
+function zoneRange(b: { minBpm: number; maxBpm: number } | { minWatts: number; maxWatts: number }): [number, number] {
+  const v = b as Partial<{ minBpm: number; maxBpm: number; minWatts: number; maxWatts: number }>;
+  return [v.minBpm ?? v.minWatts ?? 0, v.maxBpm ?? v.maxWatts ?? Infinity];
+}
+
 function zoneLine(zoneSeconds: Record<HrZone, number>, target: HrZone[]): string {
   const total = ZONES.reduce((a, z) => a + zoneSeconds[z], 0);
   if (total <= 0) return '';
@@ -259,10 +269,40 @@ export function buildCoachPrompt(s: SessionSummary): CoachPrompt {
     L.push(`- In target zones: ${b.inBandPct}% of the session`);
     if (b.tolerantSec > 0) L.push(`- At the intended effort or easier: ${b.acceptablePct}%`);
     L.push(`- Verdict: ${b.fault === 'none' ? 'on target' : b.fault === 'too-hard' ? 'harder than intended' : 'easier than intended'}`);
-    const zs = b.primaryMetric === 'power' ? s.power?.zoneSeconds : s.heartRate?.zoneSeconds;
+    const onPower = b.primaryMetric === 'power';
+    const zs = onPower ? s.power?.zoneSeconds : s.heartRate?.zoneSeconds;
     if (zs) {
       const line = zoneLine(zs, b.targetZones);
       if (line) L.push(`- Time in zone (* = target): ${line}`);
+    }
+
+    // The bounds were in the SessionSummary all along and simply never rendered,
+    // so a note that wanted to give a heart-rate ceiling had no number to use and
+    // invented one — 150bpm for an athlete whose Z1 tops out around 125. Give the
+    // real band, and say which end is the number to act on, because the two ends
+    // mean opposite things depending on the intent.
+    const zb = onPower ? s.power?.zoneBounds : s.heartRate?.zoneBounds;
+    if (zb) {
+      const unit = onPower ? 'W' : 'bpm';
+      const ranges = b.targetZones.map((z) => zoneRange(zb[z]));
+      const lo = Math.min(...ranges.map((r) => r[0]));
+      const hi = Math.max(...ranges.map((r) => r[1]));
+      const cfg = INTENT_BANDS[s.intent];
+      L.push(
+        !Number.isFinite(hi)
+          ? `- That band starts at ${lo} ${unit} and has no upper bound`
+          : lo <= 0
+            ? `- That band is anything up to ${hi} ${unit}`
+            : `- That band is ${lo}–${hi} ${unit}`,
+      );
+      if (cfg.aboveIsFault && Number.isFinite(hi)) {
+        L.push(
+          `- A ceiling you recommend must be ${hi} ${unit} — the top of the TARGET band. Do not give a higher number. The tolerated zones are what this session type gets away with, not what it aims at.`,
+        );
+      }
+      if (cfg.belowIsFault) {
+        L.push(`- A floor you recommend must be ${lo} ${unit} — the bottom of the target band.`);
+      }
     }
   }
 
