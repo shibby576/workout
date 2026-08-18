@@ -7,6 +7,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { INTENT_STRUCTURE } from './intentBands.js';
 import { structureSession } from './structuring.js';
 import type { StructuringInput } from './structuring.js';
 import type { AthleteProfile } from './zones.js';
@@ -738,6 +739,52 @@ describe('splits', () => {
     assert.equal(s.pace?.splits.length, 2);
     assert.ok(s.pace!.splits[0].paceSecPerMi > s.pace!.splits[1].paceSecPerMi);
     assert.ok(s.signals.some((x) => x.code === 'negative_split'));
+  });
+
+  // From real feedback: on a recovery hike the note praised "a strong finishing
+  // effort". Finishing harder is a virtue on a hard session and a drift in the
+  // fault direction on an easy one, so the valence has to travel with the signal.
+  it('marks a fast finish as against the intent on easy sessions', () => {
+    const splits_standard = [
+      { split: 1, distance: 1609, moving_time: 540, elapsed_time: 540, average_speed: 2.98 },
+      { split: 2, distance: 1609, moving_time: 480, elapsed_time: 480, average_speed: 3.35 },
+    ];
+    for (const intent of ['recovery', 'base'] as const) {
+      const s = run(steady(600, 125), intent, { splits_standard });
+      const sig = s.signals.find((x) => x.code === 'negative_split');
+      assert.equal(sig?.detail?.againstIntent, true, `${intent} should flag a fast finish`);
+    }
+  });
+
+  // Threshold is a both-sided band, and a controlled negative split there is
+  // decent execution — so the flag keys on the easy-day intents, not on
+  // "too hard is a fault", which threshold also satisfies.
+  it('leaves a fast finish unflagged on a hard session', () => {
+    const s = run(steady(600, 125), 'threshold', {
+      splits_standard: [
+        { split: 1, distance: 1609, moving_time: 540, elapsed_time: 540, average_speed: 2.98 },
+        { split: 2, distance: 1609, moving_time: 480, elapsed_time: 480, average_speed: 3.35 },
+      ],
+    });
+    const sig = s.signals.find((x) => x.code === 'negative_split');
+    assert.ok(sig);
+    assert.equal(sig?.detail?.againstIntent, undefined);
+  });
+});
+
+describe('progression guidance', () => {
+  // The note endorsed a 90-minute duration nothing in the app judges. Root cause
+  // was telling the model to "recommend the next progression" on an intent that
+  // has none, leaving duration as the only dial it could reach for.
+  it('states a progression for every intent', () => {
+    for (const intent of ['recovery', 'base', 'threshold', 'vo2max'] as const) {
+      assert.ok(INTENT_STRUCTURE[intent].progression.length > 0);
+    }
+  });
+
+  it('tells the model recovery has no progression and fences duration', () => {
+    assert.match(INTENT_STRUCTURE.recovery.progression, /NONE/);
+    assert.match(INTENT_STRUCTURE.recovery.progression, /not prescribe a duration/i);
   });
 });
 

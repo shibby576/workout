@@ -941,10 +941,25 @@ function deriveSignals(s: SessionSummary, intent: IntentType): Signal[] {
   // fatigue. So intervals are judged by `interval_strain` below instead, on the
   // thing coaching actually asks of a set — did OUTPUT hold across it?
   const onIntervals = !!s.structure && band.emphasizeSustainability;
+
+  // Finishing stronger is a virtue on a hard session and a miss on an easy one,
+  // where it is the session drifting in exactly the direction it was meant to
+  // avoid. Left unflagged, the note praised "a strong finishing effort" on a
+  // recovery hike. The discriminator is the easy-day intents — the ones where
+  // going too EASY is not a fault, so there is no upside to a fast finish. Not
+  // `aboveIsFault`, which also catches threshold, where a controlled negative
+  // split is decent execution rather than a miss.
+  const finishingHardIsAFault = band.aboveIsFault && !band.belowIsFault;
+
   if (s.drift && !onIntervals && Math.abs(s.drift.decouplingPct) >= 5) {
+    const negative = s.drift.decouplingPct < 0;
     signals.push({
-      code: s.drift.decouplingPct > 0 ? 'high_drift' : 'negative_drift',
-      detail: { decouplingPct: s.drift.decouplingPct, method: s.drift.method },
+      code: negative ? 'negative_drift' : 'high_drift',
+      detail: {
+        decouplingPct: s.drift.decouplingPct,
+        method: s.drift.method,
+        ...(negative && finishingHardIsAFault ? { againstIntent: true } : {}),
+      },
     });
   }
 
@@ -954,9 +969,14 @@ function deriveSignals(s: SessionSummary, intent: IntentType): Signal[] {
     const first = splits[0].paceSecPerMi;
     const last = splits[splits.length - 1].paceSecPerMi;
     if (first > 0 && Math.abs(last - first) / first >= 0.03) {
+      const negative = last < first;
       signals.push({
-        code: last < first ? 'negative_split' : 'positive_split',
-        detail: { firstSplitSecPerMi: Math.round(first), lastSplitSecPerMi: Math.round(last) },
+        code: negative ? 'negative_split' : 'positive_split',
+        detail: {
+          firstSplitSecPerMi: Math.round(first),
+          lastSplitSecPerMi: Math.round(last),
+          ...(negative && finishingHardIsAFault ? { againstIntent: true } : {}),
+        },
       });
     }
   }

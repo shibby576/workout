@@ -79,6 +79,12 @@ export interface IntentStructure {
   shape: string;
   /** Which levers actually change the outcome, in priority order. */
   levers: string;
+  /** What progressing this session type means when it was executed WELL.
+   *
+   *  Without this the model was told only to "recommend the next progression",
+   *  which is incoherent for recovery — there isn't one — so it reached for the
+   *  one dial left and endorsed the duration, a number nothing here judges. */
+  progression: string;
 }
 
 export const INTENT_STRUCTURE: Record<IntentType, IntentStructure> = {
@@ -87,6 +93,8 @@ export const INTENT_STRUCTURE: Record<IntentType, IntentStructure> = {
     shape: 'One continuous easy effort. Duration is modest; there are no reps.',
     levers:
       'Slow down, shorten, or walk the hills. There is no such thing as too easy here, so never recommend more intensity. A little heart-rate drift late in a long easy session is normal and not a problem on its own.',
+    progression:
+      'NONE. A recovery session is not meant to get harder, longer or better over time — it exists to absorb the load of the other sessions, and how much is needed depends on what it is recovering from. When one is executed well the honest note is that the EFFORT was right, stated concretely (the zone the heart rate held and for how much of the session). Do not prescribe a duration, do not call the duration ideal, and do not tell the athlete to repeat this exact session.',
   },
   base: {
     purpose:
@@ -95,6 +103,8 @@ export const INTENT_STRUCTURE: Record<IntentType, IntentStructure> = {
       'One continuous steady effort at an even pace from the first mile. No reps, no surges, no fast finish.',
     levers:
       'Hold one pace for the whole run rather than drifting up. Start at target pace instead of easing into it. If holding target pace still drives heart rate above the band, the honest read is that easy pace is currently slower than expected — slow down further rather than pushing.',
+    progression:
+      'More TIME at the same easy effort, added gradually. The pace does not get faster; the run gets longer.',
   },
   threshold: {
     purpose:
@@ -103,6 +113,8 @@ export const INTENT_STRUCTURE: Record<IntentType, IntentStructure> = {
       'Either one sustained block (e.g. 1x20min) or a few long reps with short recoveries (e.g. 2x10min, 3x8min off 2min jog). Recoveries are short by design — the point is to keep lactate elevated, not to fully recover.',
     levers:
       'Change total time in the band, rep length, or recovery length. Splitting one long block into two shorter reps (1x20 becomes 2x10) is the standard fix when the single block cannot be held to the end. Going HARDER is almost never the fix: it shortens what can be sustained and defeats the session.',
+    progression:
+      'More total time in the band at the same pace — 2x10 becomes 2x12, then 3x10. The pace stays where it is.',
   },
   vo2max: {
     purpose:
@@ -111,6 +123,8 @@ export const INTENT_STRUCTURE: Record<IntentType, IntentStructure> = {
       'Repeated hard efforts of roughly 2-5 minutes with recoveries short enough that heart rate stays elevated (e.g. 6x2min off 90s, 5x3min off 2min).',
     levers:
       'Rep length and recovery length come first, pace second. Heart rate takes 60-90 seconds to climb, so reps shorter than about 90 seconds end before it arrives and the session reads easy however fast the running was; the fix there is longer reps or shorter recoveries, never slower running. Recoveries are meant to run about as long as the rep they follow, or a little shorter. The set passes or fails on whether PACE HELD from the first rep to the last: heart rate rising across the reps at held pace is the normal response and needs no correction, while a pace that fades means the opening reps were too fast for the number of reps attempted.',
+    progression:
+      'One more rep, or slightly longer reps, at the SAME pace — 6x2min becomes 7x2min or 6x2.5min. A faster pace is not a progression; it just makes the set unrepeatable.',
   },
 };
 

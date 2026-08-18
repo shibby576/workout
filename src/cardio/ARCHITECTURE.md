@@ -23,9 +23,13 @@ in three tables:
 
 - `INTENT_BANDS` — target zones, tolerated zones, which misses are faults.
 - `PACE_TARGETS` — target pace as a ratio of the athlete's threshold speed.
-- `INTENT_STRUCTURE` — what the session type is *for*, its usual shape, and
-  which levers actually change it. This is what stops the note recommending
-  "run slower" when the problem is that heart rate never got high enough.
+- `INTENT_STRUCTURE` — what the session type is *for*, its usual shape, which
+  levers actually change it, and what *progressing* it means when it went well.
+  This is what stops the note recommending "run slower" when the problem is that
+  heart rate never got high enough. The progression field exists because
+  "recommend the next progression" is incoherent for recovery — there isn't one
+  — and the model filled the gap by endorsing the session's duration, which
+  nothing here judges.
 
 Everything else in the app is derived, not entered.
 
@@ -105,7 +109,7 @@ model is involved, and each one is a single line to change.
 | `time_above_band` / `time_below_band` | Off-band time that did *not* trip the 25% bar — the nuance the verdict deliberately tolerates |
 | `high_drift` / `negative_drift` | Decoupling ≥ +5% or ≤ −5%, **steady sessions only** |
 | `interval_strain` | An interval set drifted ≥ +5% or faded ≥ 5%. Carries the one lever to pull, already chosen |
-| `negative_split` / `positive_split` | First and last split differ by ≥ 3%, steady sessions only |
+| `negative_split` / `positive_split` | First and last split differ by ≥ 3%, steady sessions only. A fast finish carries `againstIntent` on easy-day intents, where it is drift in the fault direction rather than a strong finish |
 | `reps_too_short_for_hr` | Median work rep < 90s **and** ≥ 20% of reps missed target |
 | `recoveries_too_long` | Median recovery > 1.5× median work |
 | `rep_fade` / `rep_build` | Output changed ≥ 5% from first work rep to last |

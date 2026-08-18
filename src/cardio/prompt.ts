@@ -91,7 +91,10 @@ THE RECOMMENDATION
 - Be specific about what to change and by how much: a pace, a heart-rate ceiling,
   a rep count, a recovery length, a change to how the session is structured.
 - Prefer the lever that fixes the largest gap the data shows. If execution matched
-  the intent, recommend the next progression instead.
+  the intent, use the progression stated in the brief for this session type — and
+  where the brief says there is no progression, say the effort was right and name
+  it concretely (the zone, and how much of the session held it). Do not invent a
+  progression the brief does not give you.
 - Prescribe the STRUCTURE, not only a pace. "Run 6x2min at 7:15 off 90s jog" is a
   recommendation; "run at the prescribed pace" is not. Where the structure itself
   is the problem, say what to change it to — 1x20 becomes 2x10, ten 1-minute reps
@@ -113,6 +116,11 @@ HARD RULES
 - Do not simply restate the numbers; the athlete can already see them. Say what they mean.
 - When the brief flags low confidence, do not write as if the reading were precise.
 - When a minor excursion is noted, treat it as nuance worth mentioning, not as a failed session.
+- Nothing here judges how LONG the session should have been. There is no target
+  duration in the brief, and whether a duration was right depends on the rest of
+  the training week, which you were not given. State the duration as context if
+  it helps, but never call it ideal, optimal or correct, and never tell the
+  athlete to hold, repeat or match a duration in future sessions.
 - Never prescribe medical advice or specific training loads you were not given.`;
 
 function fmtSignal(s: Signal): string {
@@ -139,9 +147,13 @@ function fmtSignal(s: Signal): string {
       }
       return `Output fell ${d.fadePct}% across the set, so the pace chosen was not repeatable for this many reps. The lever is a SLOWER OPENING PACE — run the first reps at a speed that can still be held on the last one. Do NOT recommend changing the recoveries; recovery length is not the problem here.`;
     case 'negative_drift':
-      return `Output rose relative to heart rate through the session (decoupling ${d.decouplingPct}%) — a strong finish.`;
+      return d.againstIntent
+        ? `Output rose relative to heart rate through the session (decoupling ${d.decouplingPct}%) — the effort built towards the end. On this session type that is drifting in the fault direction, not a strong finish. Do not praise it.`
+        : `Output rose relative to heart rate through the session (decoupling ${d.decouplingPct}%) — a strong finish.`;
     case 'negative_split':
-      return `Negative split: finished faster than started (${pace(Number(d.firstSplitSecPerMi))} to ${pace(Number(d.lastSplitSecPerMi))} per mile).`;
+      return d.againstIntent
+        ? `Finished faster than it started (${pace(Number(d.firstSplitSecPerMi))} to ${pace(Number(d.lastSplitSecPerMi))} per mile). On this session type an even effort is the point, so a fast finish is a drift in the fault direction — do NOT describe it as a strong finish or as something to repeat.`
+        : `Negative split: finished faster than started (${pace(Number(d.firstSplitSecPerMi))} to ${pace(Number(d.lastSplitSecPerMi))} per mile).`;
     case 'positive_split':
       return `Positive split: slowed through the session (${pace(Number(d.firstSplitSecPerMi))} to ${pace(Number(d.lastSplitSecPerMi))} per mile).`;
     case 'dominant_zone':
@@ -213,6 +225,7 @@ export function buildCoachPrompt(s: SessionSummary): CoachPrompt {
   L.push(`- Purpose: ${struct.purpose}`);
   L.push(`- Normal shape: ${struct.shape}`);
   L.push(`- Levers that actually change it: ${struct.levers}`);
+  L.push(`- If it was executed well, progressing it means: ${struct.progression}`);
   L.push('');
   L.push('SESSION');
   const indoor = /virtual|trainer|indoor|weight|hiit|highintensity|workout/i.test(s.activity.sportType);
