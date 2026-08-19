@@ -865,3 +865,48 @@ describe('strain on an interval session', () => {
     assert.equal(s.signals.find((x) => x.code === 'interval_strain'), undefined);
   });
 });
+
+describe('threshold banding and the structural lever', () => {
+  // From real feedback: the note said 94% was "at the correct effort" but that
+  // most of it sat in "the harder zone 4", and recommended shifting work into
+  // Z3. Z4 IS the threshold zone — LT2 sits on the Z3/Z4 boundary — so that was
+  // advice to stop doing the session. Z3 is tolerated as the climb-in, not aimed at.
+  it('targets Z4 alone and tolerates Z3', () => {
+    const inZ4 = run(steady(1200, 160), 'threshold');
+    assert.deepEqual(inZ4.intentBand?.targetZones, [4]);
+    assert.equal(inZ4.intentBand?.inBandPct, 100);
+
+    const inZ3 = run(steady(1200, 140), 'threshold');
+    // Tolerated, so not a fault — but honestly reported as 0% at threshold
+    // rather than counted as on-target the way the old [3,4] band did.
+    assert.equal(inZ3.intentBand?.inBandPct, 0);
+    assert.equal(inZ3.intentBand?.acceptablePct, 100);
+    assert.equal(inZ3.intentBand?.fault, 'none');
+  });
+
+  // The athlete faded and wanted a structural answer, which the config already
+  // knew (1x20 becomes 2x10) but the model did not reach for.
+  it('names a concrete split when a sustained threshold block fades', () => {
+    const s = run(steady(1500, 160), 'threshold', {
+      splits_standard: [
+        { split: 1, distance: 1609, moving_time: 420, elapsed_time: 420, average_speed: 3.83 },
+        { split: 2, distance: 1609, moving_time: 470, elapsed_time: 470, average_speed: 3.42 },
+      ],
+    });
+    const sig = s.signals.find((x) => x.code === 'sustained_block_faded');
+    assert.ok(sig, 'a faded sustained block should name the structural lever');
+    assert.equal(sig?.detail?.inBandMin, 25);
+    assert.equal(sig?.detail?.suggestReps, 3);
+    assert.equal(sig?.detail?.suggestRepMin, 8);
+  });
+
+  it('stays quiet when the block held', () => {
+    const s = run(steady(1500, 160), 'threshold', {
+      splits_standard: [
+        { split: 1, distance: 1609, moving_time: 470, elapsed_time: 470, average_speed: 3.42 },
+        { split: 2, distance: 1609, moving_time: 420, elapsed_time: 420, average_speed: 3.83 },
+      ],
+    });
+    assert.equal(s.signals.find((x) => x.code === 'sustained_block_faded'), undefined);
+  });
+});

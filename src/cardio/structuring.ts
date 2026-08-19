@@ -978,6 +978,29 @@ function deriveSignals(s: SessionSummary, intent: IntentType): Signal[] {
           ...(negative && finishingHardIsAFault ? { againstIntent: true } : {}),
         },
       });
+
+      // A threshold block that could not be held to the end has a standard
+      // structural fix — split the same total into shorter reps with short
+      // recoveries — and the config has said so all along. The note reached for
+      // pace anyway, so the lever is computed here with real numbers rather than
+      // left to be inferred from the levers paragraph.
+      const inBandSec = s.intentBand?.inBandSec ?? 0;
+      if (intent === 'threshold' && !negative && inBandSec >= 480) {
+        const mins = Math.round(inBandSec / 60);
+        // Two reps under 24 minutes, three at or above it — keeps each rep in
+        // the 8-12 minute range that threshold work is normally built from.
+        const reps = mins >= 24 ? 3 : 2;
+        signals.push({
+          code: 'sustained_block_faded',
+          detail: {
+            inBandMin: mins,
+            suggestReps: reps,
+            suggestRepMin: Math.round(mins / reps),
+            firstSplitSecPerMi: Math.round(first),
+            lastSplitSecPerMi: Math.round(last),
+          },
+        });
+      }
     }
   }
 

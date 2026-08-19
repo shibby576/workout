@@ -22,7 +22,10 @@
 
 import type { HrZone, IntentType } from './sessionSummary.js';
 
-export const INTENT_BAND_CONFIG_VERSION = '1';
+// Bumped to 2 when threshold moved from targeting Z3+Z4 to targeting Z4 with Z3
+// tolerated. Saved summaries record the version that produced them, so older
+// fixtures stay readable rather than silently re-judged.
+export const INTENT_BAND_CONFIG_VERSION = '2';
 
 export interface IntentBand {
   /** The zones you're aiming to spend the working time in. */
@@ -146,12 +149,19 @@ export const INTENT_BANDS: Record<IntentType, IntentBand> = {
     note: 'Aerobic base. Classic error is creeping into the Z3 grey zone.',
   },
   threshold: {
-    targetZones: [3, 4],
-    tolerantZones: [],
+    // Z4 IS the threshold zone: LT2 sits on the Z3/Z4 boundary, so threshold
+    // work lands in Z4 (its lower half especially). Z3 is tempo — genuinely
+    // below threshold. Listing both as target treated a tempo run as a
+    // correctly-executed threshold session, and worse, let the note tell the
+    // athlete to move work DOWN into Z3, which is advice to stop doing the
+    // session. Z3 is tolerated instead: it absorbs the climb-in on a continuous
+    // effort without being mistaken for the aim.
+    targetZones: [4],
+    tolerantZones: [3],
     belowIsFault: true,
     aboveIsFault: true,
     emphasizeSustainability: true,
-    note: 'Sustainably hard at/near lactate threshold. Below Z3 misses the stimulus; into Z5 is overcooked.',
+    note: 'Sustainably hard AT lactate threshold, which is Z4. Z3 is tempo — tolerated as the climb-in, not the target. Into Z5 is overcooked.',
   },
   vo2max: {
     targetZones: [4, 5],

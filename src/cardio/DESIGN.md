@@ -74,11 +74,19 @@ intent targets.
 |---|---|---|---|---|
 | recovery | Z1 (Z2 ok) | — | fault | zone |
 | base | Z2 (Z1 ok) | — | fault | zone (Z3 grey zone) |
-| threshold | Z3–Z4 | fault | fault | zone (into Z5) + rep fade |
+| threshold | Z4 (Z3 ok) | fault | fault | zone (into Z5) + rep fade |
 | vo2max | Z4–Z5 | fault | n/a (Z5 is the ceiling) | rep fade |
 
-Threshold is a **both-sided** band: below Z3 misses the stimulus, into Z5 is
+Threshold is a **both-sided** band: below Z4 misses the stimulus, into Z5 is
 overcooked — threshold work must stay sustainable at/near lactate threshold.
+
+Threshold originally targeted **Z3–Z4**, which was wrong. LT2 sits on the Z3/Z4
+boundary, so Z4 *is* the threshold zone and Z3 is tempo — genuinely below it.
+Treating both as target meant a tempo run scored as a well-executed threshold
+session, and it let a note recommend moving work *down* into Z3, which is advice
+to stop doing the session. Z3 is now **tolerated**: it absorbs the climb-in on a
+continuous effort without being mistaken for the aim. `INTENT_BAND_CONFIG_VERSION`
+went to `2` for this.
 For **vo2max**, Z5 *is* the target, so overcooking can't be seen as a zone once
 5/6/7 are merged; it shows up as **rep-to-rep fade** instead
 (`SustainabilitySummary`), matching the convention that every rep should be

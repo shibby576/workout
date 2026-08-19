@@ -11,7 +11,7 @@ The athlete provides a single input: what the session was **meant** to be.
 | --- | --- | --- |
 | `recovery` | Recovery | Easy shakeout. Staying easy is the point. |
 | `base` | Base | Aerobic base — conversational, sustainable. |
-| `threshold` | Threshold | Comfortably hard, around your one-hour effort. |
+| `threshold` | Threshold | Comfortably hard, around your one-hour effort. Z4 is the target; Z3 is tolerated as the climb-in. |
 | `vo2max` | VO2 max | Hard intervals near max, repeatable across reps. |
 
 Defined as `IntentType` in `sessionSummary.ts`; display strings in `format.ts`.
@@ -93,7 +93,8 @@ The signals it can emit:
 `dominant_zone`, `interval_session`, `structure_contradicts_intent`,
 `expected_intervals_but_steady`, `reps_too_short_for_hr`, `recoveries_too_long`,
 `reps_missed_target`, `rep_fade`, `rep_build`, `hill_finish`, `high_drift`,
-`negative_drift`, `interval_strain`, `negative_split`, `positive_split`, `pace_on_target`,
+`negative_drift`, `interval_strain`, `negative_split`, `positive_split`,
+`sustained_block_faded`, `pace_on_target`,
 `pace_off_target`, `low_banding_confidence`, `cannot_band`, `no_pace_target`,
 `power_without_threshold`, `no_hr_data`, `no_power_data`, `summary_data_only`,
 `not_cardio`.
@@ -115,6 +116,7 @@ model is involved, and each one is a single line to change.
 | `rep_fade` / `rep_build` | Output changed ≥ 5% from first work rep to last |
 | `reps_missed_target` | Any work rep failed to reach the target band |
 | `hill_finish` | Final effort ≥ 5% grade **and** ≥ 3 points steeper than earlier reps |
+| `sustained_block_faded` | A threshold intent, run as one continuous block, that slowed — carries a concrete split (e.g. 3x8min) sized from the time actually spent in band |
 | `structure_contradicts_intent` | ≥ 3 work reps detected on an intent that expects steady running |
 | `expected_intervals_but_steady` | An interval intent with no reps detected |
 | `dominant_zone` | Whichever zone holds the most time |

@@ -159,6 +159,8 @@ function fmtSignal(s: Signal): string {
         : `Negative split: finished faster than started (${pace(Number(d.firstSplitSecPerMi))} to ${pace(Number(d.lastSplitSecPerMi))} per mile).`;
     case 'positive_split':
       return `Positive split: slowed through the session (${pace(Number(d.firstSplitSecPerMi))} to ${pace(Number(d.lastSplitSecPerMi))} per mile).`;
+    case 'sustained_block_faded':
+      return `The effort could not be held to the end — it slowed from ${pace(Number(d.firstSplitSecPerMi))} to ${pace(Number(d.lastSplitSecPerMi))} per mile across ${d.inBandMin} minutes at threshold. The lever is STRUCTURE, not pace: split the same total into ${d.suggestReps}x${d.suggestRepMin}min with short recoveries, so the pace holds to the last rep. Recommend that. Do not recommend easing off into the tolerated zone instead.`;
     case 'dominant_zone':
       return `Most time was spent in zone ${d.zone} (${d.pct}%).`;
     case 'interval_session':
